@@ -42,8 +42,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Core\ICompletableState.cs" />
     <Compile Include="Core\INotificationHandler.cs" />
     <Compile Include="Core\IQueryHandler.cs" />
+    <Compile Include="Core\ISerializer.cs" />
+    <Compile Include="Core\IStateManager.cs" />
     <Compile Include="Core\Pipeline.cs" />
     <Compile Include="FrameworkVersions.cs" />
     <Compile Include="Helper\FastExpressionCompiler.cs" />
