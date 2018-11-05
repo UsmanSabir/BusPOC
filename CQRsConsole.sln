@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28124.53
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CQRsConsole", "CQRsConsole\CQRsConsole.csproj", "{4BBDE76B-44BD-4E04-A6A5-C8391BC927A7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DynamicDecoratprsConsoleApp", "DynamicDecoratprsConsoleApp\DynamicDecoratprsConsoleApp.csproj", "{2651FD9D-3B1D-42D0-BF15-3DEE2F84EFC4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BusLib", "BusLib\BusLib.csproj", "{10D4B0C0-F122-432B-9D79-9BBE637D6CDE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4BBDE76B-44BD-4E04-A6A5-C8391BC927A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4BBDE76B-44BD-4E04-A6A5-C8391BC927A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4BBDE76B-44BD-4E04-A6A5-C8391BC927A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4BBDE76B-44BD-4E04-A6A5-C8391BC927A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2651FD9D-3B1D-42D0-BF15-3DEE2F84EFC4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2651FD9D-3B1D-42D0-BF15-3DEE2F84EFC4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2651FD9D-3B1D-42D0-BF15-3DEE2F84EFC4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2651FD9D-3B1D-42D0-BF15-3DEE2F84EFC4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10D4B0C0-F122-432B-9D79-9BBE637D6CDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10D4B0C0-F122-432B-9D79-9BBE637D6CDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10D4B0C0-F122-432B-9D79-9BBE637D6CDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10D4B0C0-F122-432B-9D79-9BBE637D6CDE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
