@@ -48,9 +48,17 @@
     <Compile Include="Models.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestProcess\TestDataContext.cs" />
+    <Compile Include="TestProcess\TestSagaProcess.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BusLib\BusLib.csproj">
+      <Project>{10D4B0C0-F122-432B-9D79-9BBE637D6CDE}</Project>
+      <Name>BusLib</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

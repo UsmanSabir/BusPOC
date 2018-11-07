@@ -42,6 +42,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BatchEngineCore\ITaskContext.cs" />
+    <Compile Include="BatchEngineCore\ResultStatus.cs" />
+    <Compile Include="BatchEngineCore\Saga\BaseSagaTask.cs" />
+    <Compile Include="BatchEngineCore\TaskStatus.cs" />
     <Compile Include="Core\ICompletableState.cs" />
     <Compile Include="Core\INotificationHandler.cs" />
     <Compile Include="Core\IQueryHandler.cs" />
@@ -49,6 +53,7 @@
     <Compile Include="Core\IStateManager.cs" />
     <Compile Include="Core\Pipeline.cs" />
     <Compile Include="FrameworkVersions.cs" />
+    <Compile Include="Helper\Enumeration.cs" />
     <Compile Include="Helper\FastExpressionCompiler.cs" />
     <Compile Include="Helper\Throttler.cs" />
     <Compile Include="Infrastructure\AppServerQuery.cs" />
@@ -67,6 +72,7 @@
     <Compile Include="Messages\ISystemCommand.cs" />
     <Compile Include="Messages\SystemFeatureToggleCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="BatchEngineCore\Saga\ITaskSaga.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
