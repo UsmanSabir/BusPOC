@@ -50,6 +50,7 @@
     <Compile Include="Core\Pipeline.cs" />
     <Compile Include="FrameworkVersions.cs" />
     <Compile Include="Helper\FastExpressionCompiler.cs" />
+    <Compile Include="Helper\Throttler.cs" />
     <Compile Include="Infrastructure\AppServerQuery.cs" />
     <Compile Include="Infrastructure\DbCommand.cs" />
     <Compile Include="Infrastructure\DbQuery.cs" />
