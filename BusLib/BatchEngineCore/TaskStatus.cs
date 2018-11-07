@@ -9,13 +9,15 @@ namespace BusLib.BatchEngineCore
 {
     public abstract class TaskStatus : Enumeration
     {
+        public static List<TaskStatus> AllValues { get; } = new List<TaskStatus>();
+
         public static TaskStatus Pending = new PendingTaskStatus();
         public static TaskStatus Processing = new ProcessingTaskStatus();
         public static TaskStatus Finished = new FinishedTaskStatus();
 
         public static IEnumerable<TaskStatus> List()
         {
-            return new[] { Pending, Processing, Finished};
+            return AllValues;// new[] { Pending, Processing, Finished};
         }
 
         #region Helper
@@ -49,6 +51,7 @@ namespace BusLib.BatchEngineCore
         #region ctor
         protected TaskStatus(int id, string name) : base(id, name)
         {
+            AllValues.Add(this);
         } 
         #endregion
 
