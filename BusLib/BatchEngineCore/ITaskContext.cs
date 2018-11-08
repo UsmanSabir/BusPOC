@@ -16,14 +16,16 @@ namespace BusLib.BatchEngineCore
         TaskStatus Status { get; }
 
         int RetryCount { get; }
+
+        IProcessExecutionContext ProcessExecutionContext { get; }
     }
 
-    public interface ITaskContext<T> : ITaskContext
+    public interface ITaskContext<out T> : ITaskContext
     {
         T Data { get; }
     }
 
-    public interface ISagaTaskContext<T> : ITaskContext<T>
+    public interface ISagaTaskContext<out T> : ITaskContext<T>
     {
         string State { get; }
 

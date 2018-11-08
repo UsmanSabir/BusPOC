@@ -8,10 +8,10 @@ using System.Threading.Tasks;
 
 namespace CQRsConsole.TestProcess
 {
-    internal class TestSagaProcess : BaseSagaTask<TestDataContext>
+    public class TestSagaTask : BaseSagaTask<TestDataContext>
     {
 
-        public TestSagaProcess()
+        public TestSagaTask()
         {
             DefineState("CheckOrderProducts", CheckOrder);
             DefineState("Prepare", PrepareOrder);
@@ -21,11 +21,6 @@ namespace CQRsConsole.TestProcess
         public override void Started(ISagaTaskContext<TestDataContext> context)
         {
             throw new NotImplementedException();
-        }
-
-        protected override void DefineSagaStates()
-        {
-            
         }
 
         private void CompleteOrder(ISagaTaskContext<TestDataContext> obj)

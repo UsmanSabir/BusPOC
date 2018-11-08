@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CQRsConsole.TestProcess
 {
-    class TestDataContext
+    public class TestDataContext
     {
         public int MyProperty { get; set; } = 5;
 

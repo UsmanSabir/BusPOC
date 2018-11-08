@@ -42,9 +42,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BatchEngineCore\BaseProcess.cs" />
     <Compile Include="BatchEngineCore\ITaskContext.cs" />
+    <Compile Include="BatchEngineCore\ITaskExecutionStrategy.cs" />
+    <Compile Include="BatchEngineCore\ProcessExecutionContext.cs" />
+    <Compile Include="BatchEngineCore\ProcessStatus.cs" />
     <Compile Include="BatchEngineCore\ResultStatus.cs" />
     <Compile Include="BatchEngineCore\Saga\BaseSagaTask.cs" />
+    <Compile Include="BatchEngineCore\ITask.cs" />
+    <Compile Include="BatchEngineCore\ITaskUnit.cs" />
     <Compile Include="BatchEngineCore\TaskStatus.cs" />
     <Compile Include="Core\ICompletableState.cs" />
     <Compile Include="Core\INotificationHandler.cs" />
