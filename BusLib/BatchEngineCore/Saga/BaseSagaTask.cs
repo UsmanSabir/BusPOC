@@ -9,7 +9,7 @@ namespace BusLib.BatchEngineCore.Saga
 {
     public abstract class BaseSagaTask<T> : ITaskSaga<T>
     {
-        readonly ConcurrentDictionary<string, Action<ISagaTaskContext<T>>> _sagaStateDictionary =
+        private readonly ConcurrentDictionary<string, Action<ISagaTaskContext<T>>> _sagaStateDictionary =
             new ConcurrentDictionary<string, Action<ISagaTaskContext<T>>>();
 
         protected BaseSagaTask()

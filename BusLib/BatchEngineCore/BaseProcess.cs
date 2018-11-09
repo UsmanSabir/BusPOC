@@ -33,4 +33,9 @@ namespace BusLib.BatchEngineCore
 
 
     }
+
+    public abstract class BaseTaskProcess<T> : BaseProcess<T, BaseTaskProcess<T>>, ITaskUnit<T>
+    {
+        public abstract void Execute(ITaskContext<T> context);
+    }
 }
