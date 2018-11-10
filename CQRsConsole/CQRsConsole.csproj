@@ -49,6 +49,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestProcess\TestDataContext.cs" />
+    <Compile Include="TestProcess\TestEngine.cs" />
     <Compile Include="TestProcess\TestSagaProcess.cs" />
     <Compile Include="TestProcess\TestSagaTask.cs" />
     <Compile Include="TestProcess\UnitProcess.cs" />

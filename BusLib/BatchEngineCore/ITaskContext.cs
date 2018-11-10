@@ -9,7 +9,7 @@ namespace BusLib.BatchEngineCore
     public interface ITaskContext:IMessage
     {
         //todo: id, processId, correlationId, nodeId, 
-        //todo: think about process companyId, branch, subtanent
+        //todo: think about process companyId, branch, subtenant
 
         DateTime UpdatedOn { get; }
 

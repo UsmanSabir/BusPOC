@@ -45,6 +45,12 @@
     <Compile Include="BatchEngineCore\BaseProcess.cs" />
     <Compile Include="BatchEngineCore\ITaskContext.cs" />
     <Compile Include="BatchEngineCore\ITaskExecutionStrategy.cs" />
+    <Compile Include="BatchEngineCore\ProcessGroupBuilder.cs" />
+    <Compile Include="BatchEngineCore\Groups\GroupSaga.cs" />
+    <Compile Include="BatchEngineCore\VolumeAdapters\IBatchVolumeAdapter.cs" />
+    <Compile Include="BatchEngineCore\VolumeAdapters\ISingleTypeVolumeAdapter.cs" />
+    <Compile Include="BatchEngineCore\VolumeAdapters\ITypeConverterVolumeAdapter.cs" />
+    <Compile Include="BatchEngineCore\VolumeAdapters\IVolumeAdapter.cs" />
     <Compile Include="BatchEngineCore\ProcessExecutionContext.cs" />
     <Compile Include="BatchEngineCore\ProcessStatus.cs" />
     <Compile Include="BatchEngineCore\ResultStatus.cs" />
@@ -59,6 +65,7 @@
     <Compile Include="Core\IStateManager.cs" />
     <Compile Include="Core\Pipeline.cs" />
     <Compile Include="FrameworkVersions.cs" />
+    <Compile Include="Helper\DynamicLibrary.cs" />
     <Compile Include="Helper\Enumeration.cs" />
     <Compile Include="Helper\FastExpressionCompiler.cs" />
     <Compile Include="Helper\Throttler.cs" />
