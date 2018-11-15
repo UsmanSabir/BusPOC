@@ -1,26 +1,36 @@
-﻿using System;
+﻿using BusLib.BatchEngineCore.Volume;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace BusLib.BatchEngineCore
 {
-    public interface IBaseProcess
+    internal interface IBaseProcess
     {
-        Type VolumeType { get; }
+        Type VolumeDataType { get; }
+
+        void HandleVolume(IVolumeHandler handler, IProcessExecutionContext processContext);
     }
-    public interface IBaseProcess<out T, out TU> : IBaseProcess where TU : ITask
+
+    internal interface IBaseProcess<out T> : IBaseProcess
     {
         IEnumerable<T> GetVolume(IProcessExecutionContext processContext);
 
         //void LinkProcess<T1, T2>(IBaseProcess<T1, T2> process) where T2 : ITask;
     }
 
-    public abstract class BaseProcess <T, TU>: IBaseProcess<T, TU>  where TU : ITask
+    internal interface IBaseProcessWithExecutor<out T, out TU> : IBaseProcess<T> where TU : ITask
+    {
+     
+    }
+
+    public abstract class BaseProcess <T, TU>: IBaseProcessWithExecutor<T, TU>  where TU : ITask
     {
         public abstract IEnumerable<T> GetVolume(IProcessExecutionContext processContext);
-        public Type VolumeType { get; } = typeof(T);
+        public Type VolumeDataType { get; } = typeof(T);
         public Type TaskActorType { get; } = typeof(TU);
 
+        protected bool CanRegenerateVolume { get; set; } = false;
 
         public virtual void ProcessStarting(IProcessExecutionContext processContext)
         {
@@ -42,7 +52,15 @@ namespace BusLib.BatchEngineCore
 
         }
 
+        void IBaseProcess.HandleVolume(IVolumeHandler handler, IProcessExecutionContext processContext)
+        {
+            var volumeGenerated = processContext.ProcessState.IsVolumeGenerated;
+            if (!volumeGenerated || CanRegenerateVolume)
+            {
+                handler.Handle(GetVolume(processContext), processContext); //volume visitor
+            }            
 
+        }
     }
 
     public abstract class BaseTaskProcess<T> : BaseProcess<T, BaseTaskProcess<T>>, ITaskUnit<T>

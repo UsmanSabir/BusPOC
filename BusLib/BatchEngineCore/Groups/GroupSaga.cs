@@ -2,7 +2,7 @@
 
 namespace BusLib.BatchEngineCore.Groups
 {
-    public class GroupSaga
+    internal class GroupSaga
     {
 
         public void RegisterProcess(IBaseProcess process)

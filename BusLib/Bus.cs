@@ -39,6 +39,11 @@ namespace BusLib
             _commandPipeLine.Invoke(message);
         }
 
+        internal void QueryAction<T>(Func<T> action, Action<T> onResult)
+        {
+            
+        }
+
         public void ExecuteSystemCommand(ISystemCommand message)
         {
             if(message.PipeLineKey == nameof(ICommand))

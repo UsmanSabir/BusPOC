@@ -43,14 +43,17 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BatchEngineCore\BaseProcess.cs" />
+    <Compile Include="BatchEngineCore\IProcessFactory.cs" />
     <Compile Include="BatchEngineCore\ITaskContext.cs" />
     <Compile Include="BatchEngineCore\ITaskExecutionStrategy.cs" />
+    <Compile Include="BatchEngineCore\ProcessConfiguration.cs" />
+    <Compile Include="BatchEngineCore\ProcessExecutionEngine.cs" />
     <Compile Include="BatchEngineCore\ProcessGroupBuilder.cs" />
     <Compile Include="BatchEngineCore\Groups\GroupSaga.cs" />
-    <Compile Include="BatchEngineCore\VolumeAdapters\IBatchVolumeAdapter.cs" />
-    <Compile Include="BatchEngineCore\VolumeAdapters\ISingleTypeVolumeAdapter.cs" />
-    <Compile Include="BatchEngineCore\VolumeAdapters\ITypeConverterVolumeAdapter.cs" />
-    <Compile Include="BatchEngineCore\VolumeAdapters\IVolumeAdapter.cs" />
+    <Compile Include="BatchEngineCore\Volume\Adapters\IBatchVolumeAdapter.cs" />
+    <Compile Include="BatchEngineCore\Volume\Adapters\ISingleTypeVolumeAdapter.cs" />
+    <Compile Include="BatchEngineCore\Volume\Adapters\ITypeConverterVolumeAdapter.cs" />
+    <Compile Include="BatchEngineCore\Volume\Adapters\IVolumeAdapter.cs" />
     <Compile Include="BatchEngineCore\ProcessExecutionContext.cs" />
     <Compile Include="BatchEngineCore\ProcessStatus.cs" />
     <Compile Include="BatchEngineCore\ResultStatus.cs" />
@@ -58,11 +61,16 @@
     <Compile Include="BatchEngineCore\ITask.cs" />
     <Compile Include="BatchEngineCore\ITaskUnit.cs" />
     <Compile Include="BatchEngineCore\TaskStatus.cs" />
+    <Compile Include="BatchEngineCore\Volume\IVolumeHandler.cs" />
+    <Compile Include="BatchEngineCore\Volume\VolumePipeline.cs" />
     <Compile Include="Core\ICompletableState.cs" />
+    <Compile Include="Core\IDashboardService.cs" />
+    <Compile Include="Core\ILogger.cs" />
     <Compile Include="Core\INotificationHandler.cs" />
     <Compile Include="Core\IQueryHandler.cs" />
     <Compile Include="Core\ISerializer.cs" />
     <Compile Include="Core\IStateManager.cs" />
+    <Compile Include="Core\ITransformable.cs" />
     <Compile Include="Core\Pipeline.cs" />
     <Compile Include="FrameworkVersions.cs" />
     <Compile Include="Helper\DynamicLibrary.cs" />

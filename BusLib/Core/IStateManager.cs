@@ -11,5 +11,7 @@ namespace BusLib.Core
         IEnumerable<T> GetAllIncomplete<T>() where T : ICompletableState;
 
         void Save<T>(T item) where T: ICompletableState;
+
+        T GetById<T>(object id);
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using BusLib.BatchEngineCore.VolumeAdapters;
 
 namespace BusLib.BatchEngineCore
 {
@@ -9,7 +8,7 @@ namespace BusLib.BatchEngineCore
         {
             var process = GetProcessByRef("TestProcess");
             var childProcess = GetProcessByRef("TestChildProcess");
-            var volumeAdapter = GetVolumeAdapterByName("StreamingAdapter", process.VolumeType, childProcess.VolumeType);
+            var volumeAdapter = GetVolumeAdapterByName("StreamingAdapter", process.VolumeDataType, childProcess.VolumeDataType);
 
 
         }

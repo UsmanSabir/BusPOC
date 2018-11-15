@@ -2,18 +2,21 @@
 using System.Runtime.InteropServices;
 using BusLib.BatchEngineCore;
 using BusLib.BatchEngineCore.Saga;
+using BusLib.Core;
 
 namespace CQRsConsole.TestProcess
 {
     public class TestEngine
     {
+        IStateManager _stateManager;
+
         void Start(string name)
         {
             var p=new UnitTaskProcess();
             var volume = p.GetVolume(null);
             //save state i.e. volume, sql or redis or mongodb etc
 
-            var type = p.VolumeType;
+            var type = p.VolumeDataType;
             var isSaga = typeof(ITaskSaga<>).IsAssignableFrom(p.TaskActorType);
             
             //todo resolve actor_type using ioc container
