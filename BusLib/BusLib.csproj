@@ -42,6 +42,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="PipelineFilters\DistributedMutex.cs" />
     <Compile Include="PipelineFilters\LockMessageFilter.cs" />
     <Compile Include="BatchEngineCore\BaseProcess.cs" />
     <Compile Include="BatchEngineCore\IProcessFactory.cs" />

@@ -10,11 +10,37 @@ namespace BusLib.ProcessLocks
     {
         //https://stackoverflow.com/a/2590446
         private const string GlobalPrefix = "Global\\";
+
         public ILock AcquireLock(string key, int lockWaitMillis)
         {
-            if (TryAcquireLock(key, out ILock locker, lockWaitMillis))
-                return locker;
+            var security = new EventWaitHandleSecurity();
+            // allow anyone to wait on and signal this lock
+            security.AddAccessRule(
+                new EventWaitHandleAccessRule(
+                    new SecurityIdentifier(WellKnownSidType.WorldSid, domainSid: null),
+                    EventWaitHandleRights.FullControl, // doesn't seem to work without this :-/
+                    AccessControlType.Allow
+                )
+            );
 
+            bool ignored;
+            var @event = new EventWaitHandle(
+                // if we create, start as unlocked
+                initialState: true,
+                // allow only one thread to hold the lock
+                mode: EventResetMode.AutoReset,
+                name: GlobalPrefix + key,
+                createdNew: out ignored
+            );
+            @event.SetAccessControl(security);
+
+            if (@event.WaitOne(TimeSpan.FromMilliseconds(lockWaitMillis)))
+            {
+                var locker = new SystemLock(@event);
+                return locker;
+            }
+
+            
             throw new OperationCanceledException("Unable to acquire lock");
         }
 
@@ -23,33 +49,7 @@ namespace BusLib.ProcessLocks
             locker = null;
             try
             {
-                var security = new EventWaitHandleSecurity();
-                // allow anyone to wait on and signal this lock
-                security.AddAccessRule(
-                    new EventWaitHandleAccessRule(
-                        new SecurityIdentifier(WellKnownSidType.WorldSid, domainSid: null),
-                        EventWaitHandleRights.FullControl, // doesn't seem to work without this :-/
-                        AccessControlType.Allow
-                    )
-                );
-
-                bool ignored;
-                var @event = new EventWaitHandle(
-                    // if we create, start as unlocked
-                    initialState: true,
-                    // allow only one thread to hold the lock
-                    mode: EventResetMode.AutoReset,
-                    name: GlobalPrefix+key,
-                    createdNew: out ignored
-                );
-                @event.SetAccessControl(security);
-
-                if (@event.WaitOne(TimeSpan.FromMilliseconds(timeoutMillis)))
-                {
-                    locker = new SystemLock(@event);
-                    return true;
-                }
-                
+                locker = AcquireLock(key, timeoutMillis);
             }
             catch (Exception e)
             {
