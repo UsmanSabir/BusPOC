@@ -32,16 +32,24 @@ namespace BusLib.ProcessLocks
                 name: GlobalPrefix + key,
                 createdNew: out ignored
             );
-            @event.SetAccessControl(security);
 
-            if (@event.WaitOne(TimeSpan.FromMilliseconds(lockWaitMillis)))
+            try
             {
-                var locker = new SystemLock(@event);
-                return locker;
-            }
+                @event.SetAccessControl(security);
 
-            
-            throw new OperationCanceledException("Unable to acquire lock");
+                if (@event.WaitOne(TimeSpan.FromMilliseconds(lockWaitMillis)))
+                {
+                    var locker = new SystemLock(@event);
+                    return locker;
+                }
+
+                throw new OperationCanceledException("Unable to acquire lock");
+            }
+            catch
+            {
+                @event.Dispose();
+                throw;
+            }
         }
 
         public bool TryAcquireLock(string key, out ILock locker, int timeoutMillis)

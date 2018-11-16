@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BusLib.Core;
 
-namespace BusLib.PipelineFilters
+namespace BusLib.ProcessLocks
 {
     public abstract class DistributedMutex
     {
