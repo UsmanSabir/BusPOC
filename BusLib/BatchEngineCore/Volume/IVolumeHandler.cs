@@ -8,6 +8,7 @@ namespace BusLib.BatchEngineCore.Volume
 {
     public interface IVolumeHandler
     {
+        //persist volume
         void Handle<T>(IEnumerable<T> volume, IProcessExecutionContext processContext);
     }
 }

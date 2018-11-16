@@ -3,15 +3,24 @@ using System;
 
 namespace BusLib.BatchEngineCore
 {
-    public interface IProcessExecutionContext:IMessage
+    public interface IExecutionContextMessage:IMessage
+    {
+        Guid CorrelationId { get; }
+        ILogger Logger { get; }
+    }
+
+    public interface IDashboardContextMessage:IExecutionContextMessage
+    {
+        IDashboardService DashboardService { get; }
+    }
+
+    public interface IProcessExecutionContext: IDashboardContextMessage
     {
         //todo: id, processId, correlationId, nodeId, 
 
         IProcessState ProcessState { get; }
-
-        ILogger Logger { get; }
-
-        IDashboardService DashboardService { get; }
+        
+        
 
         //IFrameworkLogger FrameworkLogger { get; }
     }

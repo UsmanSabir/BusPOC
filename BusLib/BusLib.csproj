@@ -42,6 +42,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="PipelineFilters\LockMessageFilter.cs" />
     <Compile Include="BatchEngineCore\BaseProcess.cs" />
     <Compile Include="BatchEngineCore\IProcessFactory.cs" />
     <Compile Include="BatchEngineCore\ITaskContext.cs" />
@@ -65,6 +66,7 @@
     <Compile Include="BatchEngineCore\Volume\VolumePipeline.cs" />
     <Compile Include="Core\ICompletableState.cs" />
     <Compile Include="Core\IDashboardService.cs" />
+    <Compile Include="Core\ILockFactory.cs" />
     <Compile Include="Core\ILogger.cs" />
     <Compile Include="Core\INotificationHandler.cs" />
     <Compile Include="Core\IQueryHandler.cs" />
@@ -86,12 +88,13 @@
     <Compile Include="Core\CommandHandler.cs" />
     <Compile Include="Core\DecoratedCommandHandlerBase.cs" />
     <Compile Include="Core\ICommandHandler.cs" />
-    <Compile Include="Aspects\PerfMonitorHandler.cs" />
+    <Compile Include="PipelineFilters\PerfMonitorHandler.cs" />
     <Compile Include="Messages\IMessage.cs" />
     <Compile Include="Messages\INotification.cs" />
     <Compile Include="Messages\IQuery.cs" />
     <Compile Include="Messages\ISystemCommand.cs" />
     <Compile Include="Messages\SystemFeatureToggleCommand.cs" />
+    <Compile Include="ProcessLocks\SystemLock.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="BatchEngineCore\Saga\ITaskSaga.cs" />
     <Compile Include="Utils.cs" />

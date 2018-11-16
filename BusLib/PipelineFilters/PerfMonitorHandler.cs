@@ -1,6 +1,6 @@
-﻿using System;
+﻿using BusLib.Core;
 
-namespace BusLib.Core
+namespace BusLib.PipelineFilters
 {
     public class PerfMonitorHandler<T> : FeatureCommandHandlerBase<T> where T: IMessage
     {

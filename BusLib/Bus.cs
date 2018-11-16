@@ -5,19 +5,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusLib.PipelineFilters;
 
 namespace BusLib
 {
     public class Bus
     {
         static Bus _instance;
-        public static Bus Instance
-        {
-            get
-            {
-                return _instance ?? (_instance = new Bus());
-            }
-        }
+        public static Bus Instance => _instance ?? (_instance = new Bus());
 
 
         Pipeline<ICommand> _commandPipeLine;

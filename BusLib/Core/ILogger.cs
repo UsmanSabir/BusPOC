@@ -8,6 +8,13 @@ namespace BusLib.Core
 {
     public interface ILogger
     {
+        void Trace(string message);
+
+        void Info(string info);
+
+        void Warn(string warn);
+        void Error(string error);
+        void Error(string error, Exception exception);
     }
 
     internal interface IFrameworkLogger : ILogger
