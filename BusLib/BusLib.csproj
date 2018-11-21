@@ -99,6 +99,8 @@
     <Compile Include="ProcessLocks\SystemLock.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="BatchEngineCore\Saga\ITaskSaga.cs" />
+    <Compile Include="Serializers\PrimitiveTypeSerializers.cs" />
+    <Compile Include="Serializers\SerializersFactory.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

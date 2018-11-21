@@ -8,10 +8,17 @@ namespace BusLib.Core
 {
     public interface ISerializer
     {
-        byte[] SerializeToBinary<T>(T item);
+        //byte[] SerializeToBinary<T>(T item);
         string SerializeToString<T>(T item);
 
-        T DeserializeFromBinary<T>(byte[] data);
+        ////T DeserializeFromBinary<T>(byte[] data);
         T DeserializeFromString<T>(string data);
+    }
+
+    public interface ISerializer<T> //: ISerializer
+    {
+        string SerializeToString(T item);
+
+        T DeserializeFromString(string data);
     }
 }
