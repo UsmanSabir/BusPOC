@@ -23,6 +23,8 @@ namespace CQRsConsole.TestProcess
             throw new NotImplementedException();
         }
 
+        public override int ProcessKey { get; } = 1;
+
         private void CompleteOrder(ISagaTaskContext<TestDataContext> obj)
         {
             throw new NotImplementedException();

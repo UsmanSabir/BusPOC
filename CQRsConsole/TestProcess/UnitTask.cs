@@ -8,5 +8,7 @@ namespace CQRsConsole.TestProcess
         {
             throw new System.NotImplementedException();
         }
+
+        public int ProcessKey { get; } = 1;
     }
 }

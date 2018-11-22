@@ -2,7 +2,9 @@
 using System.Runtime.InteropServices;
 using BusLib.BatchEngineCore;
 using BusLib.BatchEngineCore.Saga;
+using BusLib.BatchEngineCore.Volume;
 using BusLib.Core;
+using BusLib.Helper;
 
 namespace CQRsConsole.TestProcess
 {
@@ -29,7 +31,10 @@ namespace CQRsConsole.TestProcess
 
         }
     }
+
     
+
+
     class SagaTaskContext
     {
         public static SagaTaskContext<T> Create<T>(T val)
@@ -48,8 +53,11 @@ namespace CQRsConsole.TestProcess
         public int RetryCount { get; }
         public IProcessExecutionContext ProcessExecutionContext { get; }
         public T Data { get; }
-        public string State { get; }
+        public ITaskState State { get; }
         public string PreviousState { get; }
         public string NextState { get; }
+        public Guid CorrelationId { get; }
+        public ILogger Logger { get; }
+        public IDashboardService DashboardService { get; }
     }
 }

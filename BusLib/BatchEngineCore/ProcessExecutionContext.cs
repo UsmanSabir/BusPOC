@@ -27,6 +27,8 @@ namespace BusLib.BatchEngineCore
 
     public interface IProcessState
     {
+        int Id { get; }
+
         DateTime UpdatedOn { get; }
 
         ProcessStatus Status { get; }
@@ -39,7 +41,9 @@ namespace BusLib.BatchEngineCore
 
         int SubTenantId { get; }
 
-        string ProcessKey { get; }
+        DateTime ProcessingDate { get; }
+
+        int ProcessKey { get; }
 
         bool IsVolumeGenerated { get; }
     }

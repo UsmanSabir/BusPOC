@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace BusLib.BatchEngineCore
 {
-    interface IProcessFactory
-    {
-        IBaseProcess GetProcess(string processKey);
+    //internal interface IProcessFactory
+    //{
+    //    IBaseProcess GetProcess(string processKey);
 
-        ProcessConfiguration GetProcessConfiguration(string processKey);
-    }
+    //    ProcessConfiguration GetProcessConfiguration(int processKey);
+    //}
 }

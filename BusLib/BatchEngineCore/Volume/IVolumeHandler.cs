@@ -10,5 +10,7 @@ namespace BusLib.BatchEngineCore.Volume
     {
         //persist volume
         void Handle<T>(IEnumerable<T> volume, IProcessExecutionContext processContext);
+
+        ITaskState GetNextTask();
     }
 }

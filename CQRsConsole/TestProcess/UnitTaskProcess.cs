@@ -10,6 +10,8 @@ namespace CQRsConsole.TestProcess
             throw new System.NotImplementedException();
         }
 
+        public override int ProcessKey { get; } = 1;
+
         public override void Execute(ITaskContext<int> context)
         {
             

@@ -29,7 +29,7 @@ namespace BusLib.BatchEngineCore.Saga
             if (!string.IsNullOrWhiteSpace(context.NextState))
                 return context.NextState;
 
-            var nextState = _sagaStateDictionary.Keys.SkipWhile(s => s != context.State).ElementAtOrDefault(1);
+            var nextState = _sagaStateDictionary.Keys.SkipWhile(s => s != context.State.CurrentState).ElementAtOrDefault(1);
             return nextState;
         }
 
@@ -47,5 +47,7 @@ namespace BusLib.BatchEngineCore.Saga
         {
             Started(context);
         }
+
+        public abstract int ProcessKey { get; }
     }
 }

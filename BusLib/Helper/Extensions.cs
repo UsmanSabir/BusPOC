@@ -1,4 +1,5 @@
 ﻿using System;
+using BusLib.BatchEngineCore;
 
 namespace BusLib.Helper
 {
@@ -15,6 +16,24 @@ namespace BusLib.Helper
             }
 
             return (int)totalMilliseconds;
+        }
+
+        public static void MarkAsError(this IProcessExecutionContext context, string errorMessage)
+        {
+            context.Logger.Error(errorMessage);
+            //todo: send to stateManager queue
+        }
+
+        public static void MarkAsVolumeGenerated(this IProcessExecutionContext context)
+        {
+            //todo: send to stateManager queue
+        }
+
+        internal static string GetFormatedLogMessage(this IProcessExecutionContext context, string msg,
+            Exception exception=null)
+        {
+            return
+                $"{msg ?? string.Empty} for process Id: {context.ProcessState.Id}, Key: {context.ProcessState.ProcessKey}, CorrelationId: {context.CorrelationId}{(exception!=null?exception.ToString():string.Empty)}";
         }
     }
 }

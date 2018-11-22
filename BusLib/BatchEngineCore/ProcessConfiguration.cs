@@ -12,6 +12,6 @@ namespace BusLib.BatchEngineCore
 
         public int BatchSize { get; set; }
 
-
+        public int MaxVolumeRetries { get; set; }
     }
 }

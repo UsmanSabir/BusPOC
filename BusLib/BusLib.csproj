@@ -42,7 +42,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BatchEngineCore\TaskProducerWorker.cs" />
     <Compile Include="Helper\Extensions.cs" />
+    <Compile Include="Helper\ICacheAside.cs" />
+    <Compile Include="PipelineFilters\RetryFeatureHandler.cs" />
     <Compile Include="ProcessLocks\DistributedMutex.cs" />
     <Compile Include="PipelineFilters\LockMessageFilter.cs" />
     <Compile Include="BatchEngineCore\BaseProcess.cs" />
@@ -96,6 +99,7 @@
     <Compile Include="Messages\IQuery.cs" />
     <Compile Include="Messages\ISystemCommand.cs" />
     <Compile Include="Messages\SystemFeatureToggleCommand.cs" />
+    <Compile Include="ProcessLocks\MachineLockFactory.cs" />
     <Compile Include="ProcessLocks\SystemLock.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="BatchEngineCore\Saga\ITaskSaga.cs" />

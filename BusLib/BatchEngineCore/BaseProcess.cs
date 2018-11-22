@@ -7,6 +7,8 @@ namespace BusLib.BatchEngineCore
 {
     internal interface IBaseProcess
     {
+        int ProcessKey { get; }
+
         Type VolumeDataType { get; }
 
         void HandleVolume(IVolumeHandler handler, IProcessExecutionContext processContext);
@@ -27,6 +29,8 @@ namespace BusLib.BatchEngineCore
     public abstract class BaseProcess <T, TU>: IBaseProcessWithExecutor<T, TU>  where TU : ITask
     {
         public abstract IEnumerable<T> GetVolume(IProcessExecutionContext processContext);
+        public abstract int ProcessKey { get; }
+
         public Type VolumeDataType { get; } = typeof(T);
         public Type TaskActorType { get; } = typeof(TU);
 
@@ -66,5 +70,6 @@ namespace BusLib.BatchEngineCore
     public abstract class BaseTaskProcess<T> : BaseProcess<T, BaseTaskProcess<T>>, ITaskUnit<T>
     {
         public abstract void Execute(ITaskContext<T> context);
+        public abstract override int ProcessKey { get; }
     }
 }
