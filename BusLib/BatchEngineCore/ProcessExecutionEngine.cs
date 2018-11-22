@@ -112,9 +112,24 @@ namespace BusLib.BatchEngineCore
 
             public void Handle(IProcessExecutionContext message)
             {
+                message.Logger.Trace("Volume handler ");
+
                 IVolumeHandler volumeHandler = null; //todo initialize based on configuration or fixed?
 
+
+
                 _process.HandleVolume(volumeHandler, message);
+                message.Logger.Info("Volume generated successfully ");
+
+                if (_process is IHasSupportingData processWithSupportingData)
+                {
+                    message.Logger.Trace("Initializing Supporting Data ");
+
+                    //initializer process wise cache data
+                    Robustness.Instance.SafeCallWithRetry(() => processWithSupportingData.InitializeSupportingData(message), 3, 1000, message.Logger);
+                }
+
+                message.Logger.Trace("Marking process as Generated");
                 message.MarkAsVolumeGenerated();
                 
             }

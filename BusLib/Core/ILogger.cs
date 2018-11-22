@@ -13,6 +13,7 @@ namespace BusLib.Core
         void Info(string info);
 
         void Warn(string warn);
+        void Warn(string message, Exception e);
         void Error(string error);
         void Error(string error, Exception exception);
     }

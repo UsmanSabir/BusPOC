@@ -26,6 +26,11 @@ namespace BusLib.BatchEngineCore
      
     }
 
+    public interface IHasSupportingData
+    {
+        void InitializeSupportingData(IProcessExecutionContext context);
+    }
+
     public abstract class BaseProcess <T, TU>: IBaseProcessWithExecutor<T, TU>  where TU : ITask
     {
         public abstract IEnumerable<T> GetVolume(IProcessExecutionContext processContext);

@@ -34,6 +34,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -45,6 +46,7 @@
     <Compile Include="BatchEngineCore\TaskProducerWorker.cs" />
     <Compile Include="Helper\Extensions.cs" />
     <Compile Include="Helper\ICacheAside.cs" />
+    <Compile Include="Helper\Robustness.cs" />
     <Compile Include="PipelineFilters\RetryFeatureHandler.cs" />
     <Compile Include="ProcessLocks\DistributedMutex.cs" />
     <Compile Include="PipelineFilters\LockMessageFilter.cs" />
