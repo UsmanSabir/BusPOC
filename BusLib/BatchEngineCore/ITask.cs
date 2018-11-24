@@ -1,4 +1,6 @@
-﻿namespace BusLib.BatchEngineCore
+﻿using BusLib.Core;
+
+namespace BusLib.BatchEngineCore
 {
     public interface ITask
     {

@@ -9,8 +9,8 @@ namespace BusLib.BatchEngineCore.Saga
 {
     public abstract class BaseSagaTask<T> : ITaskSaga<T>
     {
-        private readonly ConcurrentDictionary<string, Action<ISagaTaskContext<T>>> _sagaStateDictionary =
-            new ConcurrentDictionary<string, Action<ISagaTaskContext<T>>>();
+        private readonly ConcurrentDictionary<string, Action<ITaskContext<T>>> _sagaStateDictionary =
+            new ConcurrentDictionary<string, Action<ITaskContext<T>>>();
 
         protected BaseSagaTask()
         {
@@ -19,12 +19,12 @@ namespace BusLib.BatchEngineCore.Saga
 
         // protected abstract void DefineSagaStates();
 
-        protected void DefineState(string name, Action<ISagaTaskContext<T>> action)
+        protected void DefineState(string name, Action<ITaskContext<T>> action)
         {
             _sagaStateDictionary.AddOrUpdate(name, action, (s,a)=> action);            
         }
 
-        protected internal virtual string GetNextState(ISagaTaskContext<T> context)
+        protected internal virtual string GetNextState(ITaskContext<T> context)
         {
             if (!string.IsNullOrWhiteSpace(context.NextState))
                 return context.NextState;
@@ -33,17 +33,17 @@ namespace BusLib.BatchEngineCore.Saga
             return nextState;
         }
 
-        public virtual void Started(ISagaTaskContext<T> context)
+        public virtual void Started(ITaskContext<T> context)
         {
             
         }
 
-        public virtual void Completed(ISagaTaskContext<T> context)
+        public virtual void Completed(ITaskContext<T> context)
         {
             
         }
 
-        public void Execute(ISagaTaskContext<T> context)
+        public void Execute(ITaskContext<T> context)
         {
             Started(context);
         }

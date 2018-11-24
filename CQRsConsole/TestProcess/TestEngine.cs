@@ -42,7 +42,7 @@ namespace CQRsConsole.TestProcess
             return new SagaTaskContext< T>(val);
         }
     }
-    class SagaTaskContext<T>: ISagaTaskContext<T>
+    class SagaTaskContext<T>: ITaskContext<T>
     {
         public SagaTaskContext(T val)
         {
@@ -52,12 +52,16 @@ namespace CQRsConsole.TestProcess
         public TaskStatus Status { get; }
         public int RetryCount { get; }
         public IProcessExecutionContext ProcessExecutionContext { get; }
+        public ITransaction Transaction { get; }
         public T Data { get; }
         public ITaskState State { get; }
         public string PreviousState { get; }
         public string NextState { get; }
-        public Guid CorrelationId { get; }
         public ILogger Logger { get; }
         public IDashboardService DashboardService { get; }
+        public void Dispose()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

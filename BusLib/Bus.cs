@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusLib.BatchEngineCore;
 using BusLib.PipelineFilters;
 
 namespace BusLib
@@ -14,13 +15,20 @@ namespace BusLib
         static Bus _instance;
         public static Bus Instance => _instance ?? (_instance = new Bus());
 
+        private Pipeline<ITaskMessage> _taskProcessorPipeline;
 
         Pipeline<ICommand> _commandPipeLine;
 
         public Bus()
         {
             BuildCommandHandlerPipeline();
-            
+            _taskProcessorPipeline = GetTaskProcessorPipeLine();
+        }
+
+        private Pipeline<ITaskMessage> GetTaskProcessorPipeLine()
+        {
+            //Pipeline<ITaskMessage> tasksPipeline=new Pipeline<ITaskMessage>();
+            throw new NotImplementedException();
         }
 
         private void BuildCommandHandlerPipeline()

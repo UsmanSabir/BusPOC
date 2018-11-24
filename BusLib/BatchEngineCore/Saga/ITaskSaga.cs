@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BusLib.BatchEngineCore.Saga
 {
-    public interface ITaskSaga<in T> :ITask<T, ISagaTaskContext<T>>
+    public interface ITaskSaga<in T> :ITask<T, ITaskContext<T>>
     {
         
     }

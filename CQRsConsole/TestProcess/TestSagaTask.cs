@@ -18,24 +18,24 @@ namespace CQRsConsole.TestProcess
             DefineState("CompleteOrder", CompleteOrder);
         }
 
-        public override void Started(ISagaTaskContext<TestDataContext> context)
+        public override void Started(ITaskContext<TestDataContext> context)
         {
             throw new NotImplementedException();
         }
 
         public override int ProcessKey { get; } = 1;
 
-        private void CompleteOrder(ISagaTaskContext<TestDataContext> obj)
+        private void CompleteOrder(ITaskContext<TestDataContext> obj)
         {
             throw new NotImplementedException();
         }
 
-        private void PrepareOrder(ISagaTaskContext<TestDataContext> obj)
+        private void PrepareOrder(ITaskContext<TestDataContext> obj)
         {
             throw new NotImplementedException();
         }
 
-        private void CheckOrder(ISagaTaskContext<TestDataContext> obj)
+        private void CheckOrder(ITaskContext<TestDataContext> obj)
         {
             throw new NotImplementedException();
         }

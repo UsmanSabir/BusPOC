@@ -33,7 +33,12 @@ namespace BusLib.Helper
             Exception exception=null)
         {
             return
-                $"{msg ?? string.Empty} for process Id: {context.ProcessState.Id}, Key: {context.ProcessState.ProcessKey}, CorrelationId: {context.CorrelationId}{(exception!=null?exception.ToString():string.Empty)}";
+                $"{msg ?? string.Empty} for process Id: {context.ProcessState.Id}, Key: {context.ProcessState.ProcessKey}, CorrelationId: {context.ProcessState.CorrelationId}{(exception!=null?exception.ToString():string.Empty)}";
+        }
+
+        public static IDisposable ToDisposable(this Action action)
+        {
+            return new DisposableAction(action);
         }
     }
 }

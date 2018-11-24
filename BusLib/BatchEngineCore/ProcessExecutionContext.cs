@@ -5,7 +5,7 @@ namespace BusLib.BatchEngineCore
 {
     public interface IExecutionContextMessage:IMessage
     {
-        Guid CorrelationId { get; }
+        //Guid CorrelationId { get; }
         ILogger Logger { get; }
     }
 
@@ -19,8 +19,20 @@ namespace BusLib.BatchEngineCore
         //todo: id, processId, correlationId, nodeId, 
 
         IProcessState ProcessState { get; }
-        
-        
+
+        ProcessConfiguration Configuration { get; }
+
+        bool AddUpdateProcessData(string key, object value);
+
+        T GetProcessData<T>(string key);
+
+        object GetProcessData(string key);
+
+
+        bool SetTempData(string key, object value);
+        T GetTempData<T>(string key);
+
+        object GetTempData(string key);
 
         //IFrameworkLogger FrameworkLogger { get; }
     }
@@ -28,6 +40,8 @@ namespace BusLib.BatchEngineCore
     public interface IProcessState
     {
         int Id { get; }
+
+        Guid CorrelationId { get; }
 
         DateTime UpdatedOn { get; }
 
@@ -46,5 +60,9 @@ namespace BusLib.BatchEngineCore
         int ProcessKey { get; }
 
         bool IsVolumeGenerated { get; }
+
+        int? ParentId { get; }
+
+        int GroupId { get; }
     }
 }
