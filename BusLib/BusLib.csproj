@@ -52,6 +52,7 @@
     <Compile Include="Helper\ICacheAside.cs" />
     <Compile Include="Helper\Robustness.cs" />
     <Compile Include="PipelineFilters\RetryFeatureHandler.cs" />
+    <Compile Include="PipelineFilters\TasksThrottlingFilter.cs" />
     <Compile Include="PipelineFilters\ThrottlingFilter.cs" />
     <Compile Include="ProcessLocks\DistributedMutex.cs" />
     <Compile Include="PipelineFilters\LockMessageFilter.cs" />

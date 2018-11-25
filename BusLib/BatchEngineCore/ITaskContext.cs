@@ -1,4 +1,6 @@
 ﻿using System;
+using BusLib.Core;
+using BusLib.Helper;
 
 namespace BusLib.BatchEngineCore
 {
@@ -25,6 +27,10 @@ namespace BusLib.BatchEngineCore
     {
         ITaskState TaskState { get; }
         ITransaction Transaction { get; }
+
+        SafeDisposable OnCompleteActions { get; }
+
+        ILogger Logger { get; }
     }
 
     //public interface ISagaTaskContext<out T> : ITaskContext<T>
