@@ -43,11 +43,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BatchEngineCore\Handlers\ApplicationTasksHandlers.cs" />
+    <Compile Include="BatchEngineCore\Handlers\TaskHandler.cs" />
+    <Compile Include="BatchEngineCore\Handlers\TaskProcessingPipeline.cs" />
     <Compile Include="BatchEngineCore\ITransaction.cs" />
     <Compile Include="BatchEngineCore\LoggerFactory.cs" />
     <Compile Include="BatchEngineCore\StatePersistence\KeyConstants.cs" />
     <Compile Include="BatchEngineCore\TaskProducerWorker.cs" />
-    <Compile Include="Helper\DisposableAction.cs" />
+    <Compile Include="Core\IErrorNotification.cs" />
+    <Compile Include="Helper\SafeDisposable.cs" />
+    <Compile Include="Helper\SafeDisposableActions.cs" />
     <Compile Include="Helper\Extensions.cs" />
     <Compile Include="Helper\ICacheAside.cs" />
     <Compile Include="Helper\Robustness.cs" />

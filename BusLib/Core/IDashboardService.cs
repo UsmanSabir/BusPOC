@@ -8,6 +8,6 @@ namespace BusLib.Core
 {
     public interface IDashboardService
     {
-
+        void LogError(string error);
     }
 }

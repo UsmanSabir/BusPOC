@@ -16,6 +16,9 @@ namespace BusLib.Core
         void Warn(string message, Exception e);
         void Error(string error);
         void Error(string error, Exception exception);
+
+        void Fetal(string error);
+        void Fetal(string error, Exception exception);
     }
 
     internal interface IFrameworkLogger : ILogger

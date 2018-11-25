@@ -8,10 +8,13 @@ namespace BusLib.BatchEngineCore
 {
     public class ProcessConfiguration
     {
-        public string ProcessKey { get; set; }
+        public int ProcessKey { get; set; }
 
         public int BatchSize { get; set; }
 
+        public int? TaskTimeout { get; set; }
+
         public int MaxVolumeRetries { get; set; }
+        public int? QueueSize { get; set; }
     }
 }

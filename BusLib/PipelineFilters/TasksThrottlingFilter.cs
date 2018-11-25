@@ -22,7 +22,7 @@ namespace BusLib.PipelineFilters
             try
             {
                 _semaphoreSlim.Wait();
-                message.OnCompleteActions.OnCleanup(() => _semaphoreSlim.Release());
+                message.OnCompleteActions.Register(() => _semaphoreSlim.Release());
 
                 message.Logger.Trace("Leaving throttling filter");
 

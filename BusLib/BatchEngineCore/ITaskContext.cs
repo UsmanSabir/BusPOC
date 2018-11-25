@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using BusLib.Core;
 using BusLib.Helper;
 
@@ -11,11 +12,15 @@ namespace BusLib.BatchEngineCore
 
         ITaskState State { get; }
 
+        string PrevState { get; }
+
         string NextState { get; }
+
 
         IProcessExecutionContext ProcessExecutionContext { get; }
 
         ITransaction Transaction { get; }
+        CancellationToken CancellationToken { get; }
     }
 
     public interface ITaskContext<out T> : ITaskContext
@@ -28,7 +33,7 @@ namespace BusLib.BatchEngineCore
         ITaskState TaskState { get; }
         ITransaction Transaction { get; }
 
-        SafeDisposable OnCompleteActions { get; }
+        SafeDisposableActions OnCompleteActions { get; }
 
         ILogger Logger { get; }
     }

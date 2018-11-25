@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 using BusLib.BatchEngineCore;
 using BusLib.BatchEngineCore.Saga;
 using BusLib.BatchEngineCore.Volume;
@@ -53,8 +54,10 @@ namespace CQRsConsole.TestProcess
         public int RetryCount { get; }
         public IProcessExecutionContext ProcessExecutionContext { get; }
         public ITransaction Transaction { get; }
+        public CancellationToken CancellationToken { get; }
         public T Data { get; }
         public ITaskState State { get; }
+        public string PrevState { get; }
         public string PreviousState { get; }
         public string NextState { get; }
         public ILogger Logger { get; }
