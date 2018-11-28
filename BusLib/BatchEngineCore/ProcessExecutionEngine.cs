@@ -23,7 +23,7 @@ namespace BusLib.BatchEngineCore
 
         void Execute(IProcessExecutionContext context)
         {
-            _logger.Trace(context.GetFormatedLogMessage("Volume request received"));
+            _logger.Trace(context.GetFormattedLogMessage("Volume request received"));
             _pauseHandler.WaitOne();
 
             var processKey = context.ProcessState.ProcessKey;
@@ -31,13 +31,13 @@ namespace BusLib.BatchEngineCore
 
             if (pipeline == null)
             {
-                var error = context.GetFormatedLogMessage("Volume handler not found");
+                var error = context.GetFormattedLogMessage("Volume handler not found");
                 _logger.Error(error);
                 context.MarkAsError(error);
                 return;
             }
 
-            _logger.Trace(context.GetFormatedLogMessage("Volume request sending to pipeline"));
+            _logger.Trace(context.GetFormattedLogMessage("Volume request sending to pipeline"));
 
             try
             {
@@ -45,7 +45,7 @@ namespace BusLib.BatchEngineCore
             }
             catch (Exception e)
             {
-                var error = context.GetFormatedLogMessage("Error generating volume", e);
+                var error = context.GetFormattedLogMessage("Error generating volume", e);
                 _logger.Error(error);
                 context.MarkAsError(error);
             }

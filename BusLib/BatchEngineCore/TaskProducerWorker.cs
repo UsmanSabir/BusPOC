@@ -12,6 +12,7 @@ namespace BusLib.BatchEngineCore
     class TaskProducerWorker
     {
         private IVolumeHandler _volumeHandler;
+        private IStateManager _stateManager;
         private ICacheAside _cacheAside;
 
         ConcurrentDictionary<int, ITask> _taskExecutors = new ConcurrentDictionary<int, ITask>();
@@ -42,7 +43,7 @@ namespace BusLib.BatchEngineCore
                 //{
                 //    //todo load task status from other status table
                 //}
-                var taskStates = _volumeHandler.GetTaskStates(taskItem.Id, taskItem.ProcessId);
+                var taskStates = _stateManager.GetTaskStates(taskItem.Id, taskItem.ProcessId);
                 if (taskStates != null && taskStates.Any())
                 {
                     

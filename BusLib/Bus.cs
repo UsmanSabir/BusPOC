@@ -20,6 +20,7 @@ namespace BusLib
 
         Pipeline<ICommand> _commandPipeLine;
         private ILogger _logger;
+        private readonly ITaskExecutorRepository _taskExecutorsRepo;
 
         public Bus()
         {
@@ -59,7 +60,7 @@ namespace BusLib
 
         private Pipeline<ITaskMessage> GetTaskProcessorPipeLine()
         {
-            Pipeline<ITaskMessage> tasksPipeline=new TaskProcessingPipeline(LoggerFactory.GetSystemLogger());
+            Pipeline<ITaskMessage> tasksPipeline=new TaskProcessingPipeline(LoggerFactory.GetSystemLogger(), _taskExecutorsRepo);
             
             throw new NotImplementedException();
         }

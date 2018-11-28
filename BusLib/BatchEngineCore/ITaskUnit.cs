@@ -2,7 +2,7 @@
 
 namespace BusLib.BatchEngineCore
 {
-    public interface ITaskUnit<in T> : ITask<T, ITaskContext<T>>
+    public interface ITaskUnit<in T> : ITask<T, ITaskContext>
     {
         
     }

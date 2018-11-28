@@ -4,8 +4,17 @@ using System.Collections.Concurrent;
 
 namespace BusLib.Serializers
 {
-    internal class SerializersFactory
+    internal class SerializersFactory : ISerializersFactory
     {
+        static Lazy<SerializersFactory> instance = new Lazy<SerializersFactory>();
+        public static SerializersFactory Instance
+        {
+            get
+            {
+                return instance.Value;
+            }
+        }
+
         readonly ConcurrentDictionary<Type, ISerializer> _serializers;
         readonly ISerializer _defaultSerializer;
 
@@ -30,12 +39,16 @@ namespace BusLib.Serializers
 
         public ISerializer GetSerializer<T>()
         {
-            if(_serializers.TryGetValue(typeof(T), out ISerializer serializer))
+            return GetSerializer(typeof(T));
+        }
+
+        public ISerializer GetSerializer(Type type)
+        {
+            if (_serializers.TryGetValue(type, out ISerializer serializer))
             {
                 return serializer;
             }
-            return _defaultSerializer;            
+            return _defaultSerializer;
         }
-
     }
 }

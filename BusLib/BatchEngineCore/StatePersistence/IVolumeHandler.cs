@@ -13,8 +13,6 @@ namespace BusLib.BatchEngineCore.Volume
 
         ITaskState GetNextTaskWithTransaction(out ITransaction transaction);
 
-        void AddTaskState(ITaskContext taskContext, string key, string value); // Add state command
-
-        List<KeyValuePair<string,string>> GetTaskStates(int taskId, int processId);
+        
     }
 }

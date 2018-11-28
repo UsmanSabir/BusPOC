@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BusLib.BatchEngineCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,5 +14,11 @@ namespace BusLib.Core
         void Save<T>(T item) where T: ICompletableState;
 
         T GetById<T>(object id);
+
+        IEnumerable<T> Get<T>(Predicate<T> predicate);
+
+        void AddTaskState(ITaskContext taskContext, string key, string value); // Add state command
+
+        List<KeyValuePair<string, string>> GetTaskStates(int taskId, int processId);
     }
 }

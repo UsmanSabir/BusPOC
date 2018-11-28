@@ -43,7 +43,7 @@ namespace CQRsConsole.TestProcess
             return new SagaTaskContext< T>(val);
         }
     }
-    class SagaTaskContext<T>: ITaskContext<T>
+    class SagaTaskContext<T>: ITaskContext
     {
         public SagaTaskContext(T val)
         {
@@ -62,9 +62,11 @@ namespace CQRsConsole.TestProcess
         public string NextState { get; }
         public ILogger Logger { get; }
         public IDashboardService DashboardService { get; }
+        public ResultStatus Result { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
         public void Dispose()
         {
-            throw new NotImplementedException();
+            
         }
     }
 }

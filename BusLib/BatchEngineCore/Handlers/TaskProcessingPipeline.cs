@@ -7,7 +7,7 @@ namespace BusLib.BatchEngineCore.Handlers
     {
         private int _nodeThrotling = 0; //todo
 
-        public TaskProcessingPipeline(ILogger logger) : base(new TaskHandler())
+        public TaskProcessingPipeline(ILogger logger, ITaskExecutorRepository taskRepository) : base(new TaskHandler(taskRepository))
         {
             var throttlingFilter = new TasksThrottlingFilter(_nodeThrotling, logger);
             RegisterFeatureDecorator(throttlingFilter);

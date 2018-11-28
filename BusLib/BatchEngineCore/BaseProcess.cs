@@ -1,4 +1,5 @@
 ﻿using BusLib.BatchEngineCore.Volume;
+using BusLib.Core;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -74,7 +75,15 @@ namespace BusLib.BatchEngineCore
 
     public abstract class BaseTaskProcess<T> : BaseProcess<T, BaseTaskProcess<T>>, ITaskUnit<T>
     {
-        public abstract void Execute(ITaskContext<T> context);
+        public abstract void Execute(T item, ITaskContext context);
+
+        public void Handle(ITaskContext taskContext, ISerializer serializer)
+        {
+            throw new NotImplementedException();
+        }
+
         public abstract override int ProcessKey { get; }
+
+        public ISerializer Serializer { get; protected set; }
     }
 }

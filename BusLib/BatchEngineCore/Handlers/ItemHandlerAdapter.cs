@@ -4,11 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusLib.BatchEngineCore.Saga
+namespace BusLib.BatchEngineCore.Handlers
 {
-    public interface ITaskSaga<in T> : ITask<T, ITaskContext>
+    internal class ItemHandlerAdapter
     {
         
     }
-
 }

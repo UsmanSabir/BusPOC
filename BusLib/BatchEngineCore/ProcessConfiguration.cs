@@ -14,6 +14,10 @@ namespace BusLib.BatchEngineCore
 
         public int? TaskTimeout { get; set; }
 
+        public int? TaskRetries { get; set; }
+
+        public int? RetryDelayMilli { get; set; }
+
         public int MaxVolumeRetries { get; set; }
         public int? QueueSize { get; set; }
     }

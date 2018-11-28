@@ -21,12 +21,15 @@ namespace BusLib.BatchEngineCore
 
         ITransaction Transaction { get; }
         CancellationToken CancellationToken { get; }
+        ResultStatus Result { get; set; }
+
+        //void MarkStatus(TaskStatus status, ResultStatus result, string reason); //todo hide from implementaion, maybe extension method
     }
 
-    public interface ITaskContext<out T> : ITaskContext
-    {
-        T Data { get; }
-    }
+    //public interface ITaskContext<out T> : ITaskContext
+    //{
+    //    T Data { get; }
+    //}
 
     internal interface ITaskMessage : IMessage
     {
@@ -66,6 +69,8 @@ namespace BusLib.BatchEngineCore
         int DeferredCount { get; }
 
         string NodeKey { get; }
+
+        bool IsFinished { get; }
     }
 
 }

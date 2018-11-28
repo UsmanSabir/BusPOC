@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using BusLib.BatchEngineCore;
+using BusLib.Core;
 
 namespace CQRsConsole.TestProcess
 {
@@ -12,7 +13,14 @@ namespace CQRsConsole.TestProcess
 
         public override int ProcessKey { get; } = 1;
 
-        public void Execute(ITaskContext<int> context)
+        public ISerializer Serializer { get; } = null;
+
+        public void Execute(int item, ITaskContext context)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void Handle(ITaskContext taskContext, ISerializer serializer)
         {
             throw new System.NotImplementedException();
         }

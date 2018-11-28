@@ -43,9 +43,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BatchEngineCore\Constants.cs" />
+    <Compile Include="BatchEngineCore\Exceptions\FrameworkExceptions.cs" />
     <Compile Include="BatchEngineCore\Handlers\ApplicationTasksHandlers.cs" />
+    <Compile Include="BatchEngineCore\Handlers\ItemHandlerAdapter.cs" />
+    <Compile Include="BatchEngineCore\Handlers\TaskExecutor.cs" />
     <Compile Include="BatchEngineCore\Handlers\TaskHandler.cs" />
     <Compile Include="BatchEngineCore\Handlers\TaskProcessingPipeline.cs" />
+    <Compile Include="BatchEngineCore\ITaskExecutorRepository.cs" />
     <Compile Include="BatchEngineCore\ITransaction.cs" />
     <Compile Include="BatchEngineCore\LoggerFactory.cs" />
     <Compile Include="BatchEngineCore\StatePersistence\KeyConstants.cs" />
@@ -56,6 +61,7 @@
     <Compile Include="Helper\Extensions.cs" />
     <Compile Include="Helper\ICacheAside.cs" />
     <Compile Include="Helper\Robustness.cs" />
+    <Compile Include="Helper\TransientFaultHandling.cs" />
     <Compile Include="PipelineFilters\RetryFeatureHandler.cs" />
     <Compile Include="PipelineFilters\TasksThrottlingFilter.cs" />
     <Compile Include="PipelineFilters\ThrottlingFilter.cs" />
@@ -116,6 +122,7 @@
     <Compile Include="ProcessLocks\SystemLock.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="BatchEngineCore\Saga\ITaskSaga.cs" />
+    <Compile Include="Serializers\ISerializersFactory.cs" />
     <Compile Include="Serializers\PrimitiveTypeSerializers.cs" />
     <Compile Include="Serializers\SerializersFactory.cs" />
     <Compile Include="Utils.cs" />

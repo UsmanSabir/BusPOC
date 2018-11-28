@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using BusLib.BatchEngineCore;
+using BusLib.Core;
 
 namespace BusLib.Helper
 {
@@ -32,12 +33,39 @@ namespace BusLib.Helper
             //todo: send to stateManager queue
         }
 
-        internal static string GetFormatedLogMessage(this IProcessExecutionContext context, string msg,
+        internal static string GetFormattedLogMessage(this IProcessExecutionContext context, string msg,
             Exception exception = null)
         {
             return
                 $"{msg ?? string.Empty} for process Id: {context.ProcessState.Id}, Key: {context.ProcessState.ProcessKey}, CorrelationId: {context.ProcessState.CorrelationId}{(exception != null ? exception.ToString() : string.Empty)}";
         }
+
+        public static void ReloadTaskState(this ITaskContext context, string prevState, string nextState, ConcurrentDictionary<string, string> taskStatesCollection)
+        {
+            //todo: 
+            throw new NotImplementedException();
+        }
+
+        public static void MarkTaskStatus(this ITaskContext context, TaskStatus status, ResultStatus result, string reason)
+        {
+            //todo: 
+            throw new NotImplementedException();
+        }
+
+        public static void PassToTask<T, TU>(this ITask<T, TU> task, TU context,ISerializer serializer) where TU:ITaskContext
+        {
+            task.Execute(serializer.DeserializeFromString<T>(context.State.Payload), context);
+            //todo: 
+            throw new NotImplementedException();
+        }
+
+        public static bool IsFinished(this ITaskContext context)
+        {
+            return context.State.IsFinished; // TaskStatus.Finished.Equals(context.State.Status);
+        }
+        
+
+
 
         //public static IDisposable ToDisposable(this Action action)
         //{
