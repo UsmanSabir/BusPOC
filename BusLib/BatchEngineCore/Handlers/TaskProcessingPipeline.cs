@@ -3,15 +3,15 @@ using BusLib.PipelineFilters;
 
 namespace BusLib.BatchEngineCore.Handlers
 {
-    internal class TaskProcessingPipeline:Pipeline<ITaskMessage>
+    internal class TaskProcessingPipeline:Pipeline<TaskMessage>
     {
-        private int _nodeThrotling = 0; //todo
+        private readonly int _nodeThrottling = NodeSettings.Instance.Throttling; //todo
 
         public TaskProcessingPipeline(ILogger logger, ITaskExecutorRepository taskRepository) : base(new TaskHandler(taskRepository))
         {
-            var throttlingFilter = new TasksThrottlingFilter(_nodeThrotling, logger);
+            var throttlingFilter = new TasksThrottlingFilter(_nodeThrottling, logger);
             RegisterFeatureDecorator(throttlingFilter);
-            if (_nodeThrotling <= 0)
+            if (_nodeThrottling <= 0)
             {
                 throttlingFilter.Disable();
             }

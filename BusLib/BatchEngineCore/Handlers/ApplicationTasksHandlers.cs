@@ -9,12 +9,12 @@ namespace BusLib.BatchEngineCore.Handlers
 {
     internal class ApplicationTasksHandlers
     {
-        static Lazy<ApplicationTasksHandlers> taskHandlers=new Lazy<ApplicationTasksHandlers>();
-        public static ApplicationTasksHandlers Instance { get; } = taskHandlers.Value;
+        private static readonly Lazy<ApplicationTasksHandlers> TaskHandlers=new Lazy<ApplicationTasksHandlers>();
+        public static ApplicationTasksHandlers Instance { get; } = TaskHandlers.Value;
 
-        ConcurrentDictionary<int, ITask> _taskExecutors = new ConcurrentDictionary<int, ITask>(); //todo scan from assemblies
+        private readonly ConcurrentDictionary<int, ITask> _taskExecutors = new ConcurrentDictionary<int, ITask>(); //todo scan from assemblies
 
-        ISerializersFactory _serializersFactory;
+        readonly ISerializersFactory _serializersFactory;
 
         public ApplicationTasksHandlers(ISerializersFactory serializersFactory)
         {

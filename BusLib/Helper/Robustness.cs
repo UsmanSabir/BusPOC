@@ -15,7 +15,7 @@ namespace BusLib.Helper
             SafeCallWithRetry(action, 0, 0, logger);
         }
 
-        public void SafeCallWithRetry(Action action, int maxRetries, int delay = 1000, ILogger logger = null)
+        public void SafeCallWithRetry(Action action, int maxRetries, int delay = 1000, ILogger logger = null, string msg=null)
         {
             int currentRetry = 0;
 
@@ -28,7 +28,8 @@ namespace BusLib.Helper
                 }
                 catch (Exception ex)
                 {
-                    logger?.Warn($"Robustness.SafeCall has error '{ex.Message}'", ex);
+                    var logMessage = msg ?? $"Robustness.SafeCall has error '{ex.Message}'";
+                    logger?.Warn(logMessage, ex);
 
                     currentRetry++;
 
@@ -44,6 +45,11 @@ namespace BusLib.Helper
 
                 Thread.Sleep(delay);
             }
+        }
+
+        public void SafeCall(Action action, ILogger logger, string msg)
+        {
+            SafeCallWithRetry(action, 0, 0, logger, msg);
         }
     }
 }

@@ -1,12 +1,11 @@
 ﻿using BusLib.Core;
 using BusLib.Messages;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using BusLib.BatchEngineCore;
+using BusLib.BatchEngineCore.Groups;
 using BusLib.BatchEngineCore.Handlers;
+using BusLib.BatchEngineCore.PubSub;
 using BusLib.PipelineFilters;
 
 namespace BusLib
@@ -16,12 +15,12 @@ namespace BusLib
         static Bus _instance;
         public static Bus Instance => _instance ?? (_instance = new Bus());
 
-        private Pipeline<ITaskMessage> _taskProcessorPipeline;
+        private Pipeline<TaskMessage> _taskProcessorPipeline;
 
         Pipeline<ICommand> _commandPipeLine;
         private ILogger _logger;
         private readonly ITaskExecutorRepository _taskExecutorsRepo;
-
+        private Pipeline<GroupMessage> _grouPipeline;
         public Bus()
         {
             HookExceptionEvents();
@@ -29,6 +28,8 @@ namespace BusLib
 
             BuildCommandHandlerPipeline();
             _taskProcessorPipeline = GetTaskProcessorPipeLine();
+            _grouPipeline=new GroupHandlerPipeline();
+            
         }
 
         #region Unhandled Exceptions
@@ -58,11 +59,25 @@ namespace BusLib
 
         #endregion
 
-        private Pipeline<ITaskMessage> GetTaskProcessorPipeLine()
+        internal void HandleGroupMessage(GroupMessage msg)
         {
-            Pipeline<ITaskMessage> tasksPipeline=new TaskProcessingPipeline(LoggerFactory.GetSystemLogger(), _taskExecutorsRepo);
-            
+            _grouPipeline.Invoke(msg);
+        }
+
+        internal void HandleWatchDogMessage(IWatchDogMessage msg)
+        {
             throw new NotImplementedException();
+        }
+
+        internal void HandleTaskMessage(TaskMessage msg)
+        {
+            _taskProcessorPipeline.Invoke(msg);
+        }
+
+        private Pipeline<TaskMessage> GetTaskProcessorPipeLine()
+        {
+            Pipeline<TaskMessage> tasksPipeline=new TaskProcessingPipeline(LoggerFactory.GetSystemLogger(), _taskExecutorsRepo);
+            return tasksPipeline;
         }
 
         private void BuildCommandHandlerPipeline()

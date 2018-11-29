@@ -64,5 +64,7 @@ namespace BusLib.BatchEngineCore
         int? ParentId { get; }
 
         int GroupId { get; }
+
+        bool IsFinished { get; }
     }
 }

@@ -14,5 +14,10 @@ namespace BusLib.BatchEngineCore
         {
             throw new NotImplementedException();
         }
+
+        public static ILogger GetGroupLogger(int groupId)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

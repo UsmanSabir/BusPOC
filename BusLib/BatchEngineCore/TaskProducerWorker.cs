@@ -9,73 +9,44 @@ using BusLib.Helper;
 
 namespace BusLib.BatchEngineCore
 {
-    class TaskProducerWorker
+    internal class TaskProducerWorker:RepeatingProcess
     {
         private IVolumeHandler _volumeHandler;
-        private IStateManager _stateManager;
         private ICacheAside _cacheAside;
-
-        ConcurrentDictionary<int, ITask> _taskExecutors = new ConcurrentDictionary<int, ITask>();
-        private ILogger _logger;
-
-        public void Run()
+        
+        private void Run()
         {
             var taskItem = _volumeHandler.GetNextTaskWithTransaction(out ITransaction transaction);
-            
-            //var disposable = new Action(() => transaction.Rollback()).ToDisposable();
-            //ITaskContext<>
 
-            //todo null checks and other validations
-
-            var processExecutionContext = _cacheAside.GetProcessExecutionContext(taskItem.ProcessId);
-            var processKey = processExecutionContext.ProcessState.ProcessKey;
-            LoggerFactory.GetTaskLogger(taskItem.Id, taskItem.ProcessId,
-                processExecutionContext.ProcessState.CorrelationId);
-
-            // ITaskContext
-            string prevState = string.Empty;
-            string nextState = string.Empty;
-            ConcurrentDictionary<string, string> taskStatesCollection = null;
-
-            if (_taskExecutors.TryGetValue(processKey, out ITask task))
+            while (taskItem != null && Interrupter?.IsCancellationRequested==false)
             {
-                //if (taskItem.FailedCount>1) 
-                //{
-                //    //todo load task status from other status table
-                //}
-                var taskStates = _stateManager.GetTaskStates(taskItem.Id, taskItem.ProcessId);
-                if (taskStates != null && taskStates.Any())
-                {
-                    
-                    foreach (var pair in taskStates)
-                    {
-                        if (pair.Key==KeyConstants.TaskPreviousState)
-                        {
-                            prevState = pair.Value;
-                            continue;
-                        }
-                        else if (pair.Key == KeyConstants.TaskNextState)
-                        {
-                            nextState = pair.Value;
-                            continue;
-                        }
-                        else
-                        {
-                            //store custom states
-                            if (taskStatesCollection==null)
-                                taskStatesCollection=new ConcurrentDictionary<string, string>();
+                TransactionWrapper transactionWrapper = new TransactionWrapper(transaction);
 
-                            taskStatesCollection.AddOrUpdate(pair.Key, pair.Value, (k, val) => pair.Value);
-                        }
+                var processExecutionContext = _cacheAside.GetProcessExecutionContext(taskItem.ProcessId);
+                var processKey = processExecutionContext.ProcessState.ProcessKey;
+                var logger = LoggerFactory.GetTaskLogger(taskItem.Id, taskItem.ProcessId,
+                    processExecutionContext.ProcessState.CorrelationId);
+                TaskMessage taskMessage = new TaskMessage(taskItem, transaction,
+                    new SafeDisposableActions(transactionWrapper.Rollback), logger);
+                taskMessage.ProcessContext = processExecutionContext;
 
+                logger.Info($"Task picked at Node {NodeSettings.Instance.Name}");
 
-                    }
-                }
+                Bus.Instance.HandleTaskMessage(taskMessage);
+
+                taskItem = _volumeHandler.GetNextTaskWithTransaction(out transaction);
             }
-            else
-            {
-                _logger.Error($"Task executor not found for processKey: {processKey}");
-            }
+        }
+
+        public TaskProducerWorker(ILogger logger, ICacheAside cacheAside, IVolumeHandler volumeHandler) : base("TaskProducer", logger)
+        {
+            _cacheAside = cacheAside;
+            _volumeHandler = volumeHandler;
+        }
+
+        internal override void PerformIteration()
+        {
+            Run();
         }
     }
 }

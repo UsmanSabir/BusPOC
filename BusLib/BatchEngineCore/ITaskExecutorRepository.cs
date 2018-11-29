@@ -21,7 +21,7 @@ namespace BusLib.BatchEngineCore
 
     class TaskExecutorRepository : ITaskExecutorRepository
     {
-        ConcurrentDictionary<int, ProcessConsumer> _processConsumer = new ConcurrentDictionary<int, ProcessConsumer>();
+        readonly ConcurrentDictionary<int, ProcessConsumer> _processConsumer = new ConcurrentDictionary<int, ProcessConsumer>();
         readonly IStateManager _stateManager;
         private CancellationToken _token;
         readonly ILogger _logger;
@@ -41,7 +41,7 @@ namespace BusLib.BatchEngineCore
         private ProcessConsumer BuildProcessConsumer(int processId)
         {
             _logger.Trace($"Process consumer build start for processId {processId}");
-            ProcessConsumer consumer = new ProcessConsumer(_token, processId, _stateManager, LoggerFactory.GetSystemLogger(), GetProcessConfigurationFromPId(processId));
+            ProcessConsumer consumer = new ProcessConsumer(_token, processId, _stateManager, LoggerFactory.GetSystemLogger(), _cacheAside);
             consumer.Start();
             consumer.Completion.ContinueWith(c =>
             {
@@ -53,11 +53,11 @@ namespace BusLib.BatchEngineCore
             return consumer;
         }
 
-        private ProcessConfiguration GetProcessConfigurationFromPId(int processId)
-        {
-            //todo get global configuration if process configuration missing
-            var context = _cacheAside.GetProcessExecutionContext(processId);
-            return context.Configuration;            
-        }
+        //private ProcessConfiguration GetProcessConfigurationFromPId(int processId)
+        //{
+        //    //todo get global configuration if process configuration missing
+        //    var context = _cacheAside.GetProcessExecutionContext(processId);
+        //    return context.Configuration;            
+        //}
     }
 }

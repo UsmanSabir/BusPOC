@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using BusLib.BatchEngineCore.Exceptions;
+using BusLib.BatchEngineCore.PubSub;
 using BusLib.BatchEngineCore.Saga;
 using BusLib.BatchEngineCore.Volume;
 using BusLib.Core;
@@ -14,7 +15,7 @@ using BusLib.Serializers;
 
 namespace BusLib.BatchEngineCore.Handlers
 {
-    internal class TaskHandler : IHandler<ITaskMessage>
+    internal class TaskHandler : IHandler<TaskMessage>
     {
         //BlockingCollection<ITaskMessage> _processingQueue=new BlockingCollection<ITaskMessage>();
         readonly ITaskExecutorRepository _taskExecutorRepository;
@@ -24,7 +25,7 @@ namespace BusLib.BatchEngineCore.Handlers
             _taskExecutorRepository = taskExecutorRepository;            
         }
 
-        public void Handle(ITaskMessage message)
+        public void Handle(TaskMessage message)
         {
             _taskExecutorRepository.Get(message.TaskState.ProcessId).Add(message);
         }
@@ -47,18 +48,26 @@ namespace BusLib.BatchEngineCore.Handlers
         //ConcurrentBag<TaskInProcess> _taskInProcess=new ConcurrentBag<TaskInProcess>();
         ConcurrentDictionary<int, TaskInProcess> _inProcessTasks=new ConcurrentDictionary<int, TaskInProcess>();
         private ProcessConfiguration _processConfiguration;
+        private readonly ICacheAside _cacheAside;
         private const int DefaultQueueSize = 5;
         private const int TaskTimoutCheckInterval = 5000;
         private bool _isStateful;
         ISerializer _serializer;
         readonly int _processKey;
         private readonly IStateManager _stateManager;
+        private IProcessExecutionContext _processContext;
+
+        DateTime _lastInputTime;
+        private readonly int _processNotificationThresholdMilliSec = 5000;
+        private long _tasksReceivedCount = 0;
+
 
         public ProcessConsumer(CancellationToken parentToken, int processId, IStateManager stateManager,
-            ILogger logger, ProcessConfiguration processConfiguration)
+            ILogger logger, ICacheAside cacheAside) //, ProcessConfiguration processConfiguration
         {
-            _processConfiguration = processConfiguration;
-
+            _cacheAside = cacheAside;
+            _lastInputTime = DateTime.UtcNow;
+            
             //_processId = processId;
             _maxConsumers = ProcessConfiguration.BatchSize;
             _parentToken = parentToken;
@@ -66,16 +75,21 @@ namespace BusLib.BatchEngineCore.Handlers
             //_volumeHandler = volumeHandler;
             _processKey = processId; // processConfiguration.ProcessKey;
             this._stateManager = stateManager;
-            int queueSize = processConfiguration.QueueSize??DefaultQueueSize; //Environment.ProcessorCount
+
+            _processContext = cacheAside.GetProcessExecutionContext(processId);
+
+            _processConfiguration =  _processContext.Configuration;
+
+            int queueSize = _processConfiguration.QueueSize??DefaultQueueSize; //Environment.ProcessorCount
             _taskContexts = new BlockingCollection<ITaskContext>(queueSize);
             
             _processTokenSource = CancellationTokenSource.CreateLinkedTokenSource(parentToken);
             _processToken = _processTokenSource.Token;
 
-            _handler = ApplicationTasksHandlers.Instance.GetProcessTaskHandler(processConfiguration.ProcessKey);
+            _handler = ApplicationTasksHandlers.Instance.GetProcessTaskHandler(_processConfiguration.ProcessKey);
             if (_handler == null)
             {
-                var error = $"Task processor for processKey {processConfiguration.ProcessKey} not found.";
+                var error = $"Task processor for processKey {_processConfiguration.ProcessKey} not found.";
                 logger.Fetal(error);
                 throw new FrameworkException(error);
             }            
@@ -91,31 +105,41 @@ namespace BusLib.BatchEngineCore.Handlers
 
         
 
-        public void Add(ITaskMessage msg)
+        public void Add(TaskMessage msg)
         {
             try
             {
                 _semaphore.Wait(_processToken);
+                _lastInputTime = DateTime.UtcNow;
 
-                ITaskContext taskContext = null; //todo
+                //msg.TaskState.Status = TaskCompletionStatus.FromName(msg.TaskState.CurrentState); //todo
+                TaskContext taskContext = new TaskContext(msg.OnCompleteActions)
+                {
+                    Logger = msg.Logger,
+                    Transaction = msg.Transaction,
+                    State = msg.TaskState,
+                    ProcessExecutionContext = _processContext,
+                };
+                
                 if (_isStateful)
                 {
                     RestoreTaskState(taskContext);
                 }
                 _taskContexts.Add(taskContext, _processToken);
-                
+                msg.OnCompleteActions = null;
+                Interlocked.Increment(ref _tasksReceivedCount);
             }
             catch (OperationCanceledException e)
             {
                 var errMsg =
                     $"Consumer canceled for ProcessId: {msg.TaskState.ProcessId} by token {(_processToken.IsCancellationRequested ? "ProcessToken" : (_parentToken.IsCancellationRequested ? "ParentToken" : "NoToken"))} with msg {e.Message}";
                 _logger.Info(errMsg);
-                Robustness.Instance.SafeCall(msg.OnCompleteActions.Dispose);
+                Robustness.Instance.SafeCall(()=> msg.OnCompleteActions?.Dispose());
             }
             catch (Exception)
             {
                 _logger.Error($"Error creating task context {msg.TaskState.Id}");
-                Robustness.Instance.SafeCall(msg.OnCompleteActions.Dispose);
+                Robustness.Instance.SafeCall(()=> msg.OnCompleteActions?.Dispose());
             }
             finally
             {
@@ -124,7 +148,7 @@ namespace BusLib.BatchEngineCore.Handlers
             
         }
 
-        private void RestoreTaskState(ITaskContext taskContext)
+        private void RestoreTaskState(TaskContext taskContext)
         {
             var taskStates = _stateManager.GetTaskStates(taskContext.State.Id, taskContext.State.ProcessId);
             if (taskStates != null && taskStates.Any())
@@ -162,7 +186,7 @@ namespace BusLib.BatchEngineCore.Handlers
         public Task Start()
         {
             Completion = StartInternal();
-            if(ProcessConfiguration.TaskTimeout>0)
+            //if(ProcessConfiguration.TaskTimeout>0)
                 _timeoutObserverTask = GetTimeoutObserverTask();
 
             return Completion;
@@ -177,13 +201,15 @@ namespace BusLib.BatchEngineCore.Handlers
 
                     try
                     {
-                        await Task.Delay(TaskTimoutCheckInterval, _processToken);
+                        await Task.Delay(Math.Min(TaskTimoutCheckInterval,_processNotificationThresholdMilliSec), _processToken);
 
                         if (_processToken.IsCancellationRequested)
                             return;
 
                         await SweepTimedoutTasks();
-                        
+
+                        CheckLastInputInterval();
+
                     }
                     catch (TaskCanceledException e)
                     {
@@ -208,11 +234,23 @@ namespace BusLib.BatchEngineCore.Handlers
             return task;
         }
 
+        private void CheckLastInputInterval()
+        {
+            var lastInp = _lastInputTime;
+            var mdt = lastInp.AddMilliseconds(_processNotificationThresholdMilliSec);
+            if (mdt < DateTime.UtcNow)
+            {
+                IProcessInputIdleWatchDogMessage message =null;//todo
+                //_processContext.ProcessState.Id
+                Bus.Instance.HandleWatchDogMessage(message);
+            }
+        }
+
         private async Task SweepTimedoutTasks()
         {
             if (!ProcessConfiguration.TaskTimeout.HasValue)
             {
-                _logger.Warn($"Timeout observer task don't have configured task timeout from process {_processKey} key {ProcessConfiguration.ProcessKey}");
+                _logger.Trace($"Timeout observer task don't have configured task timeout from process {_processKey} key {ProcessConfiguration.ProcessKey}");
                 return;
             }
 
@@ -289,7 +327,7 @@ namespace BusLib.BatchEngineCore.Handlers
                 taskInProcess.Thread = null;
                 _inProcessTasks.TryRemove(task.State.Id, out taskInProcess); //exclude from timeout check
 
-                task.MarkTaskStatus(TaskStatus.Finished, task.Result ?? ResultStatus.Success, Constants.ReasonCompleted);
+                task.MarkTaskStatus(TaskCompletionStatus.Finished, task.Result ?? ResultStatus.Success, Constants.ReasonCompleted);
             }
             catch (OperationCanceledException e) when (e.CancellationToken == _processToken ||
                                                        e.CancellationToken == _parentToken || e.CancellationToken == task.CancellationToken)
@@ -297,29 +335,29 @@ namespace BusLib.BatchEngineCore.Handlers
                 var msg =
                     $"Task canceled by token {(_processToken.IsCancellationRequested ? "ProcessToken" : (_parentToken.IsCancellationRequested ? "ParentToken" : "NoToken"))} with msg {e.Message}";
                 task.Logger.Info(msg);
-                task.MarkTaskStatus(TaskStatus.Finished, ResultStatus.Error, Constants.ReasonCancelled);
+                task.MarkTaskStatus(TaskCompletionStatus.Finished, ResultStatus.Error, Constants.ReasonCancelled);
             }
             catch (ThreadInterruptedException e)
             {
                 task.Logger.Error("Task interrupted", e);
-                task.MarkTaskStatus(TaskStatus.Finished, ResultStatus.Error, Constants.ReasonCancelled);
+                task.MarkTaskStatus(TaskCompletionStatus.Finished, ResultStatus.Error, Constants.ReasonCancelled);
             }
             catch (ThreadAbortException e)
             {
                 task.Logger.Error("Task aborted", e);
                 Thread.ResetAbort();
-                task.MarkTaskStatus(TaskStatus.Finished, ResultStatus.Error, Constants.ReasonCancelled);                
+                task.MarkTaskStatus(TaskCompletionStatus.Finished, ResultStatus.Error, Constants.ReasonCancelled);                
             }
             catch (Exception e)
             {
                 task.Logger.Error($"Error executing task with message {e.Message}", e);
-                task.MarkTaskStatus(TaskStatus.Finished, ResultStatus.Error, e.Message);
+                task.MarkTaskStatus(TaskCompletionStatus.Finished, ResultStatus.Error, e.Message);
             }
             finally
             {
                 task.Logger.Trace("Task removing from processing queue");
                 _inProcessTasks.TryRemove(task.State.Id, out taskInProcess);
-                task.Dispose();                
+                task.Dispose();
             }
         }
 
@@ -407,6 +445,10 @@ namespace BusLib.BatchEngineCore.Handlers
                 }
             }
 
+            foreach (var taskContext in _taskContexts)
+            {
+                taskContext?.Dispose();
+            }
             _semaphore.Dispose();
             _taskContexts.Dispose();
             base.Dispose(disposing);

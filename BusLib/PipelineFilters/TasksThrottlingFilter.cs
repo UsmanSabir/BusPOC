@@ -4,7 +4,7 @@ using BusLib.Core;
 
 namespace BusLib.PipelineFilters
 {
-    internal class TasksThrottlingFilter: FeatureCommandHandlerBase<ITaskMessage>
+    internal class TasksThrottlingFilter: FeatureCommandHandlerBase<TaskMessage>
     {
         private readonly ILogger _logger;
         private readonly SemaphoreSlim _semaphoreSlim;
@@ -15,7 +15,7 @@ namespace BusLib.PipelineFilters
             _semaphoreSlim = new SemaphoreSlim(maxParallelRequest);
         }
 
-        public override void FeatureDecoratorHandler(ITaskMessage message)
+        public override void FeatureDecoratorHandler(TaskMessage message)
         {
             message.Logger.Trace("Entering throttling filter");
 

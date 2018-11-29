@@ -41,6 +41,29 @@ namespace BusLib.BatchEngineCore
         ILogger Logger { get; }
     }
 
+    class TaskMessage:SafeDisposable, ITaskMessage
+    {
+        public TaskMessage(ITaskState taskState, ITransaction transaction, SafeDisposableActions onCompleteActions, ILogger logger)
+        {
+            TaskState = taskState;
+            Transaction = transaction;
+            OnCompleteActions = onCompleteActions;
+            Logger = logger;
+        }
+
+        public ITaskState TaskState { get; }
+        public ITransaction Transaction { get; }
+        public SafeDisposableActions OnCompleteActions { get; internal set; }
+        public ILogger Logger { get; }
+        public IProcessExecutionContext ProcessContext { get; set; }
+
+        protected override void Dispose(bool disposing)
+        {
+            OnCompleteActions?.Dispose();
+            base.Dispose(disposing);
+        }
+    }
+
     //public interface ISagaTaskContext<out T> : ITaskContext<T>
     //{
         
@@ -60,7 +83,7 @@ namespace BusLib.BatchEngineCore
 
         DateTime UpdatedOn { get; }
 
-        TaskStatus Status { get; }
+        TaskCompletionStatus Status { get; }
 
         string CurrentState { get; }
 

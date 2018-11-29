@@ -8,6 +8,6 @@ namespace BusLib.Core
 {
     public interface ICompletableState
     {
-        bool IsComplete { get; }
+        bool IsFinished { get; }
     }
 }

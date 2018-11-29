@@ -50,7 +50,7 @@ namespace CQRsConsole.TestProcess
             Data = val;
         }
         public DateTime UpdatedOn { get; }
-        public TaskStatus Status { get; }
+        public TaskCompletionStatus Status { get; }
         public int RetryCount { get; }
         public IProcessExecutionContext ProcessExecutionContext { get; }
         public ITransaction Transaction { get; }

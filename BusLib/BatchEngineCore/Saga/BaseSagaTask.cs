@@ -77,7 +77,7 @@ namespace BusLib.BatchEngineCore.Saga
 
                 if(string.IsNullOrWhiteSpace(state) || state == taskContext.State.CurrentState)
                 {
-                    taskContext.MarkTaskStatus(TaskStatus.Finished, ResultStatus.Success, Constants.ReasonCompleted);
+                    taskContext.MarkTaskStatus(TaskCompletionStatus.Finished, ResultStatus.Success, Constants.ReasonCompleted);
                     return;
                 }
 

@@ -20,5 +20,6 @@ namespace BusLib.Core
         void AddTaskState(ITaskContext taskContext, string key, string value); // Add state command
 
         List<KeyValuePair<string, string>> GetTaskStates(int taskId, int processId);
+        IEnumerable<IProcessState> GetPendingGroupProcess(int groupEntityId);
     }
 }

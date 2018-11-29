@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using BusLib.BatchEngineCore;
+using BusLib.BatchEngineCore.Handlers;
 using BusLib.Core;
 
 namespace BusLib.Helper
@@ -40,13 +41,15 @@ namespace BusLib.Helper
                 $"{msg ?? string.Empty} for process Id: {context.ProcessState.Id}, Key: {context.ProcessState.ProcessKey}, CorrelationId: {context.ProcessState.CorrelationId}{(exception != null ? exception.ToString() : string.Empty)}";
         }
 
-        public static void ReloadTaskState(this ITaskContext context, string prevState, string nextState, ConcurrentDictionary<string, string> taskStatesCollection)
+        internal static void ReloadTaskState(this TaskContext context, string prevState, string nextState, ConcurrentDictionary<string, string> taskStatesCollection)
         {
-            //todo: 
-            throw new NotImplementedException();
+            context.PrevState = prevState;
+            context.NextState = nextState;
+            context.SetStates(taskStatesCollection);
+            //context.Result
         }
 
-        public static void MarkTaskStatus(this ITaskContext context, TaskStatus status, ResultStatus result, string reason)
+        public static void MarkTaskStatus(this ITaskContext context, TaskCompletionStatus completionStatus, ResultStatus result, string reason)
         {
             //todo: 
             throw new NotImplementedException();
