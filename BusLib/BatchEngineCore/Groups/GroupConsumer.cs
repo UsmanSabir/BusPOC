@@ -27,7 +27,7 @@ namespace BusLib.BatchEngineCore.Groups
 
             //foreach (var groupSubscriber in _groupSubscribers)
             //{
-            //    Robustness.Instance.SafeCall(() => { groupSubscriber.OnGroupStart(context); });
+            //    Robustness.Instance.SafeCall(() => { groupSubscriber.OnGroupStarting(context); });
             //}
         }
 

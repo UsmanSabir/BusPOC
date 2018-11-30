@@ -1,6 +1,8 @@
-﻿namespace BusLib.Core
+﻿using System;
+
+namespace BusLib.Core
 {
-    public interface IHandler<in T> where T : IMessage
+    public interface IHandler<in T>: IDisposable where T : IMessage
     {
         void Handle(T message);
     }

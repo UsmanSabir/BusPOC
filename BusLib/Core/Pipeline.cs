@@ -4,18 +4,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusLib.Helper;
 
 namespace BusLib.Core
 {
-    public class Pipeline<T> where T : IMessage
+    public class Pipeline<T>:SafeDisposable where T : IMessage
     {
         IFeatureHandler<T> _featureHandler=null;
         readonly IHandler<T> _handler;
         List<IFeatureHandler<T>> _featureHandlersCollection = new List<IFeatureHandler<T>>();
 
         IHandler<T> rootHandler => _featureHandler ?? _handler;
-
-
 
         public Pipeline(IHandler<T> handler)
         {
@@ -66,6 +65,22 @@ namespace BusLib.Core
             {
                 //OnComplete
             }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            Robustness.Instance.SafeCall(() =>
+            {
+                foreach (var featureHandler in _featureHandlersCollection)
+                {
+                    featureHandler.Dispose();
+                }
+                _featureHandlersCollection.Clear();
+            });
+            
+            Robustness.Instance.SafeCall(()=> _handler.Dispose());
+
+            base.Dispose(disposing);
         }
     }
 }

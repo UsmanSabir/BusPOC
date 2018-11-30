@@ -12,6 +12,7 @@ namespace BusLib.BatchEngineCore
         public static ResultStatus Success = new SuccessResultStatus();
         public static ResultStatus Error = new ErrorResultStatus();
         public static ResultStatus Invalid = new InvalidResultStatus();
+        public static ResultStatus Empty = new EmptyResultStatus();
 
         public static IEnumerable<ResultStatus> List()
         {
@@ -75,7 +76,15 @@ namespace BusLib.BatchEngineCore
             {
 
             }
-        } 
+        }
+
+        private class EmptyResultStatus : ResultStatus
+        {
+            public EmptyResultStatus() : base(4, "Empty")
+            {
+
+            }
+        }
         #endregion
     }
 }

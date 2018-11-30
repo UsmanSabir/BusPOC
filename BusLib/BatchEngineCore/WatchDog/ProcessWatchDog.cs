@@ -7,7 +7,7 @@ namespace BusLib.BatchEngineCore.WatchDog
 {
     public class ProcessWatchDog:RepeatingProcess
     {
-        private IStateManager _stateManager;
+        private readonly IStateManager _stateManager;
 
         public ProcessWatchDog(ILogger logger, IStateManager stateManager) : base("WatchDog", logger)
         {
@@ -30,5 +30,18 @@ namespace BusLib.BatchEngineCore.WatchDog
             //get all pending groups, processes
             //check their tasks
         }
+
+        //todo: any pub/sub triggering point
+        void CheckProcessIdle(int processId)
+        {
+            //todo check if process tasks are finished
+            //check deferred tasks
+            //check process retry
+            //complete process
+
+            //get child processes or other pending group processes
+            //send for volume generation
+        }
+
     }
 }

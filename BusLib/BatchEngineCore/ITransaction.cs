@@ -1,6 +1,8 @@
-﻿namespace BusLib.BatchEngineCore
+﻿using System;
+
+namespace BusLib.BatchEngineCore
 {
-    public interface ITransaction
+    public interface ITransaction:IDisposable
     {
         void Commit();
 
@@ -33,6 +35,12 @@
                 _transaction?.Rollback();
                 _transaction = null;
             }
+        }
+
+        public void Dispose()
+        {
+            _transaction?.Dispose();
+            _transaction = null;
         }
     }
 }

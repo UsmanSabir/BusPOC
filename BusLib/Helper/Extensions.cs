@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using BusLib.BatchEngineCore;
+using BusLib.BatchEngineCore.Groups;
 using BusLib.BatchEngineCore.Handlers;
 using BusLib.Core;
 
@@ -28,7 +29,7 @@ namespace BusLib.Helper
             context.Logger.Error(errorMessage);
             //todo: send to stateManager queue
         }
-
+        
         public static void MarkAsVolumeGenerated(this IProcessExecutionContext context)
         {
             //todo: send to stateManager queue
@@ -50,6 +51,12 @@ namespace BusLib.Helper
         }
 
         public static void MarkTaskStatus(this ITaskContext context, TaskCompletionStatus completionStatus, ResultStatus result, string reason)
+        {
+            //todo: 
+            throw new NotImplementedException();
+        }
+
+        public static void MarkGroupStatus(this IGroupEntity context, TaskCompletionStatus completionStatus, ResultStatus result, string reason)
         {
             //todo: 
             throw new NotImplementedException();

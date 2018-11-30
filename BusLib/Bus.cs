@@ -6,6 +6,7 @@ using BusLib.BatchEngineCore;
 using BusLib.BatchEngineCore.Groups;
 using BusLib.BatchEngineCore.Handlers;
 using BusLib.BatchEngineCore.PubSub;
+using BusLib.BatchEngineCore.Volume;
 using BusLib.PipelineFilters;
 
 namespace BusLib
@@ -21,6 +22,13 @@ namespace BusLib
         private ILogger _logger;
         private readonly ITaskExecutorRepository _taskExecutorsRepo;
         private Pipeline<GroupMessage> _grouPipeline;
+        private ProcessVolumePipeline _volumePipeline;
+
+        private IStateManager _stateManager;
+        private IBatchEngineSubscribers _branchEngineSubscriber;
+
+
+
         public Bus()
         {
             HookExceptionEvents();
@@ -28,7 +36,7 @@ namespace BusLib
 
             BuildCommandHandlerPipeline();
             _taskProcessorPipeline = GetTaskProcessorPipeLine();
-            _grouPipeline=new GroupHandlerPipeline();
+            _grouPipeline=new GroupHandlerPipeline(_stateManager, _logger, _branchEngineSubscriber);
             
         }
 
@@ -58,6 +66,12 @@ namespace BusLib
         }
 
         #endregion
+
+        internal void HandleVolumeRequest(ProcessExecutionContext msg)
+        {
+            _volumePipeline.Invoke(msg);
+        }
+
 
         internal void HandleGroupMessage(GroupMessage msg)
         {

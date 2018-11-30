@@ -3,10 +3,11 @@
 
 using System;
 using System.Threading;
+using BusLib.Helper;
 
 namespace BusLib.Core
 {
-    public abstract class FeatureCommandHandlerBase<T> : IFeatureHandler<T> where T:IMessage
+    public abstract class FeatureCommandHandlerBase<T> : SafeDisposable, IFeatureHandler<T> where T:IMessage
     {
         public FeatureCommandHandlerBase()
         {

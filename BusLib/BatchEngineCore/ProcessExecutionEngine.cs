@@ -11,7 +11,7 @@ using BusLib.PipelineFilters;
 namespace BusLib.BatchEngineCore
 {
     //pipeline
-    class ProcessVolumeRequestHandler: IHandler<IProcessExecutionContext>
+    class ProcessVolumeRequestHandler: IHandler<ProcessExecutionContext>
     {
         List<IBaseProcess> _registeredProcesses=new List<IBaseProcess>(); // todo: scan all assemblies for implemented processes
         private ICacheAside _cacheAside;
@@ -21,7 +21,7 @@ namespace BusLib.BatchEngineCore
         readonly ConcurrentDictionary<int, Pipeline<IProcessExecutionContext>> _processPipelines = new ConcurrentDictionary<int, Pipeline<IProcessExecutionContext>>();
         private int _delayInRetries = 3000; //todo
 
-        void Execute(IProcessExecutionContext context)
+        void Execute(ProcessExecutionContext context)
         {
             _logger.Trace(context.GetFormattedLogMessage("Volume request received"));
             _pauseHandler.WaitOne();
@@ -96,7 +96,7 @@ namespace BusLib.BatchEngineCore
             return pipeLine;
         }
 
-        public void Handle(IProcessExecutionContext message)
+        public void Handle(ProcessExecutionContext message)
         {
             Execute(message);
         }
@@ -133,6 +133,10 @@ namespace BusLib.BatchEngineCore
                 message.MarkAsVolumeGenerated();
                 
             }
+
+            public void Dispose()
+            {
+            }
         }
 
         //private void HandleVolume(IEnumerable<int> obj)
@@ -160,6 +164,10 @@ namespace BusLib.BatchEngineCore
         //    }
         //}
 
+        public void Dispose()
+        {
+            _pauseHandler?.Dispose();
+        }
     }
 
 }

@@ -1,4 +1,5 @@
-﻿using BusLib.Core;
+﻿using BusLib.BatchEngineCore.PubSub;
+using BusLib.Core;
 
 namespace BusLib.BatchEngineCore.Groups
 {
@@ -91,7 +92,22 @@ namespace BusLib.BatchEngineCore.Groups
         bool IsManual { get; }
         bool IsResubmission { get; }
         string SubmittedBy { get; }
+        string Criteria { get; }
+
+    }
+
+    public interface IProcessEntity : ICompletableState
+    {
+        int Id { get; }
+        int ProcessKey { get; }
+        int GroupId { get; }
+
+
+        bool IsManual { get; }
+        bool IsResubmission { get; }
+        string SubmittedBy { get; }
 
 
     }
+
 }

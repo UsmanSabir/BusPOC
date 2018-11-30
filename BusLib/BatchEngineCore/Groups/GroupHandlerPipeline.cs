@@ -4,7 +4,8 @@ namespace BusLib.BatchEngineCore.Groups
 {
     internal class GroupHandlerPipeline:Pipeline<GroupMessage>
     {
-        public GroupHandlerPipeline() : base(new GroupCommandHandler())
+        public GroupHandlerPipeline(IStateManager stateManager, ILogger logger,
+            IBatchEngineSubscribers batchEngineSubscribers) : base(new GroupCommandHandler(logger, batchEngineSubscribers, stateManager))
         {
 
         }

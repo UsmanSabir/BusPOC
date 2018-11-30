@@ -29,6 +29,10 @@ namespace BusLib.BatchEngineCore.Handlers
         {
             _taskExecutorRepository.Get(message.TaskState.ProcessId).Add(message);
         }
+
+        public void Dispose()
+        {
+        }
     }
 
     class ProcessConsumer: SafeDisposable
@@ -236,6 +240,12 @@ namespace BusLib.BatchEngineCore.Handlers
 
         private void CheckLastInputInterval()
         {
+            var count = _inProcessTasks.Count;
+            if (count > 0)
+            {
+                _logger.Trace($"{count} tasks running, skipping input check");
+                return;
+            }
             var lastInp = _lastInputTime;
             var mdt = lastInp.AddMilliseconds(_processNotificationThresholdMilliSec);
             if (mdt < DateTime.UtcNow)
@@ -244,6 +254,9 @@ namespace BusLib.BatchEngineCore.Handlers
                 //_processContext.ProcessState.Id
                 Bus.Instance.HandleWatchDogMessage(message);
             }
+
+            //todo: die if no further input after specific alerts
+            //Dispose();
         }
 
         private async Task SweepTimedoutTasks()

@@ -11,5 +11,9 @@ namespace BusLib.Core
         {
             command.Action();
         }
+
+        public void Dispose()
+        {
+        }
     }
 }
