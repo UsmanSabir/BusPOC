@@ -23,5 +23,7 @@ namespace BusLib.Core
         IEnumerable<IProcessState> GetPendingGroupProcess(int groupEntityId);
         ITransaction BeginTransaction();
         T Insert<T>(T process);
+        IEnumerable<T> GetIncompleteTasksForProcess<T>(int processId);
+        IEnumerable<T> GetFailedTasksForProcess<T>(int processId);
     }
 }

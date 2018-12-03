@@ -41,25 +41,32 @@ namespace BusLib.Core
         /// </summary>
         internal abstract void PerformIteration();
 
+        internal virtual void OnStart()
+        {
+
+        }
+
         private async void PerformRepeatedly()
         {
             do
             {
-                if(Interrupter.IsCancellationRequested)
+                if (Interrupter.IsCancellationRequested)
                     break;
-                
+
                 var fred = Thread.CurrentThread;
                 if (fred.Name == null)
                 {
                     Logger.Warn($"Anonymous thread {fred.ManagedThreadId} running as '{this.Name}'.");
                 }
 
-                Robustness.Instance.SafeCall(
-                    () => this.PerformIteration(),
-                    this.Logger,
-                    $"{this.Name} PerformIteration");
                 try
                 {
+                    Robustness.Instance.SafeCall(
+                        () => this.PerformIteration(),
+                        this.Logger,
+                        $"{this.Name} PerformIteration",
+                        er => er is TaskCanceledException || er is OperationCanceledException);
+
                     await Task.Delay(this.Interval, Interrupter.Token);
                 }
                 catch (TaskCanceledException)
@@ -88,6 +95,8 @@ namespace BusLib.Core
                 Interrupter = CancellationTokenSource.CreateLinkedTokenSource(parentToken);
 
             Completion = Task.Factory.StartNew(PerformRepeatedly); //parentToken
+
+            Robustness.Instance.SafeCall(OnStart, Logger);
         }
 
         protected void Stop()

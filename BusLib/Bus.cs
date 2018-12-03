@@ -20,7 +20,7 @@ namespace BusLib
 
         Pipeline<ICommand> _commandPipeLine;
         private ILogger _logger;
-        private readonly ITaskExecutorRepository _taskExecutorsRepo;
+        private readonly ITaskExecutorsPool _taskExecutorsRepo;
         private Pipeline<GroupMessage> _grouPipeline;
         private ProcessVolumePipeline _volumePipeline;
 
@@ -36,7 +36,7 @@ namespace BusLib
 
             BuildCommandHandlerPipeline();
             _taskProcessorPipeline = GetTaskProcessorPipeLine();
-            _grouPipeline=new GroupHandlerPipeline(_stateManager, _logger, _branchEngineSubscriber);
+            //_grouPipeline=new GroupHandlerPipeline(_stateManager, _logger, _branchEngineSubscriber);
             
         }
 

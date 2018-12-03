@@ -8,7 +8,7 @@ namespace BusLib.PipelineFilters
 {
     public class ConsumerFilter<T>: FeatureCommandHandlerBase<T> where T : IMessage
     {
-        BlockingCollection<T> _collection=new BlockingCollection<T>();
+        BlockingCollection<T> _collection=new BlockingCollection<T>(new ConcurrentQueue<T>());
         private CancellationToken _token;
         private ILogger _logger;
         private string _name;

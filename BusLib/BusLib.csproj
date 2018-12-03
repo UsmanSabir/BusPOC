@@ -46,7 +46,7 @@
     <Compile Include="BatchEngineCore\Constants.cs" />
     <Compile Include="BatchEngineCore\Exceptions\FrameworkExceptions.cs" />
     <Compile Include="BatchEngineCore\Groups\GroupActions.cs" />
-    <Compile Include="BatchEngineCore\Groups\GroupCommandHandler.cs" />
+    <Compile Include="BatchEngineCore\Groups\GroupsHandler.cs" />
     <Compile Include="BatchEngineCore\Groups\GroupConsumer.cs" />
     <Compile Include="BatchEngineCore\Groups\GroupHandlerPipeline.cs" />
     <Compile Include="BatchEngineCore\Groups\GroupMessage.cs" />
@@ -59,7 +59,7 @@
     <Compile Include="BatchEngineCore\Handlers\TaskHandler.cs" />
     <Compile Include="BatchEngineCore\Handlers\TaskProcessingPipeline.cs" />
     <Compile Include="BatchEngineCore\IBatchEngineSubscribers.cs" />
-    <Compile Include="BatchEngineCore\ITaskExecutorRepository.cs" />
+    <Compile Include="BatchEngineCore\Handlers\ITaskExecutorsPool.cs" />
     <Compile Include="BatchEngineCore\ITransaction.cs" />
     <Compile Include="BatchEngineCore\LoggerFactory.cs" />
     <Compile Include="BatchEngineCore\NodeSettings.cs" />

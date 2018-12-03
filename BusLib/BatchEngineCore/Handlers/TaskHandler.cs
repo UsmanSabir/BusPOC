@@ -18,16 +18,16 @@ namespace BusLib.BatchEngineCore.Handlers
     internal class TaskHandler : IHandler<TaskMessage>
     {
         //BlockingCollection<ITaskMessage> _processingQueue=new BlockingCollection<ITaskMessage>();
-        readonly ITaskExecutorRepository _taskExecutorRepository;
+        readonly ITaskExecutorsPool _taskExecutorsPool;
 
-        public TaskHandler(ITaskExecutorRepository taskExecutorRepository)
+        public TaskHandler(ITaskExecutorsPool taskExecutorsPool)
         {
-            _taskExecutorRepository = taskExecutorRepository;            
+            _taskExecutorsPool = taskExecutorsPool;            
         }
 
         public void Handle(TaskMessage message)
         {
-            _taskExecutorRepository.Get(message.TaskState.ProcessId).Add(message);
+            _taskExecutorsPool.Get(message.TaskState.ProcessId).Add(message);
         }
 
         public void Dispose()
@@ -51,10 +51,9 @@ namespace BusLib.BatchEngineCore.Handlers
         private Task _timeoutObserverTask=null;
         //ConcurrentBag<TaskInProcess> _taskInProcess=new ConcurrentBag<TaskInProcess>();
         ConcurrentDictionary<int, TaskInProcess> _inProcessTasks=new ConcurrentDictionary<int, TaskInProcess>();
-        private ProcessConfiguration _processConfiguration;
+        private readonly ProcessConfiguration _processConfiguration;
         private readonly ICacheAside _cacheAside;
         private const int DefaultQueueSize = 5;
-        private const int TaskTimoutCheckInterval = 5000;
         private bool _isStateful;
         ISerializer _serializer;
         readonly int _processKey;
@@ -62,8 +61,8 @@ namespace BusLib.BatchEngineCore.Handlers
         private IProcessExecutionContext _processContext;
 
         DateTime _lastInputTime;
-        private readonly int _processNotificationThresholdMilliSec = 5000;
         private long _tasksReceivedCount = 0;
+        private readonly int _processNotificationThresholdMilliSec = 3000;
 
 
         public ProcessConsumer(CancellationToken parentToken, int processId, IStateManager stateManager,
@@ -191,52 +190,53 @@ namespace BusLib.BatchEngineCore.Handlers
         {
             Completion = StartInternal();
             //if(ProcessConfiguration.TaskTimeout>0)
-                _timeoutObserverTask = GetTimeoutObserverTask();
+                //_timeoutObserverTask = GetTimeoutObserverTask();
 
             return Completion;
         }
 
-        private Task GetTimeoutObserverTask()
-        {
-            var task = Task.Factory.StartNew(async () =>
-            {
-                while (!_processToken.IsCancellationRequested)
-                {
+        //private Task GetTimeoutObserverTask()
+        //{
+            //var task = Task.Factory.StartNew(async () =>
+            //{
+            //    while (!_processToken.IsCancellationRequested)
+            //    {
 
-                    try
-                    {
-                        await Task.Delay(Math.Min(TaskTimoutCheckInterval,_processNotificationThresholdMilliSec), _processToken);
+            //        try
+            //        {
+            //            await Task.Delay(Math.Min(TaskTimoutCheckInterval,_processNotificationThresholdMilliSec), _processToken);
 
-                        if (_processToken.IsCancellationRequested)
-                            return;
+            //            if (_processToken.IsCancellationRequested)
+            //                return;
 
-                        await SweepTimedoutTasks();
+            //            await SweepTimedoutTasks();
 
-                        CheckLastInputInterval();
+            //            CheckLastInputInterval();
 
-                    }
-                    catch (TaskCanceledException e)
-                    {
-                        var msg =
-                            $"Timeout observer task canceled Process: {_processKey} by token {(_processToken.IsCancellationRequested ? "ProcessToken" : (_parentToken.IsCancellationRequested ? "ParentToken" : "NoToken"))} with msg {e.Message}";
-                        _logger.Info(msg);
-                    }
-                    catch (OperationCanceledException e)
-                    {
-                        var msg =
-                            $"Timeout observer task canceled Process: {_processKey} by token {(_processToken.IsCancellationRequested ? "ProcessToken" : (_parentToken.IsCancellationRequested ? "ParentToken" : "NoToken"))} with msg {e.Message}";
-                        _logger.Info(msg);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.Error($"Timeout observer got unexpected error with message {e.Message}", e);
-                    }
-                }
-                _logger.Trace($"Timeout observer stopped for Process: {_processKey} by token {(_processToken.IsCancellationRequested ? "ProcessToken" : (_parentToken.IsCancellationRequested ? "ParentToken" : "NoToken"))}");
+            //        }
+            //        catch (TaskCanceledException e)
+            //        {
+            //            var msg =
+            //                $"Timeout observer task canceled Process: {_processKey} by token {(_processToken.IsCancellationRequested ? "ProcessToken" : (_parentToken.IsCancellationRequested ? "ParentToken" : "NoToken"))} with msg {e.Message}";
+            //            _logger.Info(msg);
+            //        }
+            //        catch (OperationCanceledException e)
+            //        {
+            //            var msg =
+            //                $"Timeout observer task canceled Process: {_processKey} by token {(_processToken.IsCancellationRequested ? "ProcessToken" : (_parentToken.IsCancellationRequested ? "ParentToken" : "NoToken"))} with msg {e.Message}";
+            //            _logger.Info(msg);
+            //        }
+            //        catch (Exception e)
+            //        {
+            //            _logger.Error($"Timeout observer got unexpected error with message {e.Message}", e);
+            //        }
+            //    }
+            //    _logger.Trace($"Timeout observer stopped for Process: {_processKey} by token {(_processToken.IsCancellationRequested ? "ProcessToken" : (_parentToken.IsCancellationRequested ? "ParentToken" : "NoToken"))}");
 
-            }, _processToken);
-            return task;
-        }
+            //}, _processToken);
+            //return task;
+        //    return  Task.CompletedTask;
+        //}
 
         private void CheckLastInputInterval()
         {
@@ -255,7 +255,7 @@ namespace BusLib.BatchEngineCore.Handlers
                 Bus.Instance.HandleWatchDogMessage(message);
             }
 
-            //todo: die if no further input after specific alerts
+            //todo: die if no further input after specific interval and alerts
             //Dispose();
         }
 
@@ -273,8 +273,14 @@ namespace BusLib.BatchEngineCore.Handlers
                 pair.Value.TaskContext.Logger.Warn("Timeout, setting cancellation token");
                 pair.Value.CancellationTokenSource.Cancel();
 
-                await Task.Delay(3000, pair.Value.TaskContext.CancellationToken);//wait for graceful shutdown
-
+                try
+                {
+                    await Task.Delay(3000, pair.Value.TaskContext.CancellationToken);//wait for graceful shutdown
+                }
+                catch (TaskCanceledException e)
+                {
+                    //its OK
+                }
                 var thread = pair.Value.Thread;
                 if (thread != null && thread.IsAlive)
                 {
@@ -284,6 +290,37 @@ namespace BusLib.BatchEngineCore.Handlers
                     pair.Value.Thread?.Abort(); //just to be safe
                 }
             }
+        }
+
+        internal async Task SweepItems()
+        {
+            try
+            {
+                if (_processToken.IsCancellationRequested)
+                    return;
+
+                await SweepTimedoutTasks();
+
+                CheckLastInputInterval();
+
+            }
+            catch (TaskCanceledException e)
+            {
+                var msg =
+                    $"Timeout observer task canceled Process: {_processKey} by token {(_processToken.IsCancellationRequested ? "ProcessToken" : (_parentToken.IsCancellationRequested ? "ParentToken" : "NoToken"))} with msg {e.Message}";
+                _logger.Info(msg);
+            }
+            catch (OperationCanceledException e)
+            {
+                var msg =
+                    $"Timeout observer task canceled Process: {_processKey} by token {(_processToken.IsCancellationRequested ? "ProcessToken" : (_parentToken.IsCancellationRequested ? "ParentToken" : "NoToken"))} with msg {e.Message}";
+                _logger.Info(msg);
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Timeout observer got unexpected error with message {e.Message}", e);
+            }
+            
         }
 
         private Task StartInternal()

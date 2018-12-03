@@ -15,7 +15,8 @@ namespace BusLib.Helper
             SafeCallWithRetry(action, 0, 0, logger);
         }
 
-        public void SafeCallWithRetry(Action action, int maxRetries, int delay = 1000, ILogger logger = null, string msg=null)
+        public void SafeCallWithRetry(Action action, int maxRetries, int delay = 1000, ILogger logger = null,
+            string msg = null, Predicate<Exception> exceptionPropagateFilter = null)
         {
             int currentRetry = 0;
 
@@ -28,6 +29,10 @@ namespace BusLib.Helper
                 }
                 catch (Exception ex)
                 {
+                    var propagate = exceptionPropagateFilter?.Invoke(ex)??false;
+                    if (propagate)  //(exceptionPropagateFilter != null && exceptionPropagateFilter(ex))
+                        throw;
+
                     var logMessage = msg ?? $"Robustness.SafeCall has error '{ex.Message}'";
                     logger?.Warn(logMessage, ex);
 
@@ -50,6 +55,16 @@ namespace BusLib.Helper
         public void SafeCall(Action action, ILogger logger, string msg)
         {
             SafeCallWithRetry(action, 0, 0, logger, msg);
+        }
+
+        public void SafeCall(Action action, ILogger logger, Predicate<Exception> exceptionPropagateFilter)
+        {
+            SafeCallWithRetry(action, 0, 0, logger, null, exceptionPropagateFilter);
+        }
+
+        public void SafeCall(Action action, ILogger logger, string msg, Predicate<Exception> exceptionPropagateFilter)
+        {
+            SafeCallWithRetry(action, 0, 0, logger, msg, exceptionPropagateFilter);
         }
     }
 }

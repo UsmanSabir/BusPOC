@@ -1,4 +1,6 @@
-﻿using BusLib.BatchEngineCore.PubSub;
+﻿using System.Collections.Generic;
+using System.Linq;
+using BusLib.BatchEngineCore.PubSub;
 using BusLib.Core;
 
 namespace BusLib.BatchEngineCore.Groups
@@ -107,6 +109,28 @@ namespace BusLib.BatchEngineCore.Groups
         bool IsResubmission { get; }
         string SubmittedBy { get; }
 
+
+    }
+
+    class SubmittedGroup
+    {
+        public SubmittedGroup(IGroupEntity groupEntity, List<IProcessState> processEntities)
+        {
+            GroupEntity = groupEntity;
+            ProcessEntities = processEntities;
+        }
+
+        public IGroupEntity GroupEntity { get; }
+
+        public List<IProcessState> ProcessEntities { get; }
+
+        public IEnumerable<IProcessState> GetNextProcesses(int? parentProcessId)
+        {
+            List<IProcessState> groupProcesses = ProcessEntities;
+
+            var nextProcess = groupProcesses.Where(p => p.ParentId == parentProcessId);
+            return nextProcess;
+        }
 
     }
 

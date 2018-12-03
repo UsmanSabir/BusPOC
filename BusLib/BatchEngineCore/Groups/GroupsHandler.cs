@@ -1,4 +1,4 @@
-﻿                  using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using BusLib.BatchEngineCore.PubSub;
 using BusLib.Core;
@@ -6,12 +6,12 @@ using BusLib.Helper;
 
 namespace BusLib.BatchEngineCore.Groups
 {
-    internal class GroupCommandHandler:IHandler<GroupMessage>
+    internal class GroupsHandler
     {
         private readonly IBatchEngineSubscribers _batchEngineSubscribers;
         private readonly ILogger _logger;
         private readonly IStateManager _stateManager;
-        public GroupCommandHandler(ILogger logger, IBatchEngineSubscribers batchEngineSubscribers, IStateManager stateManager)
+        public GroupsHandler(ILogger logger, IBatchEngineSubscribers batchEngineSubscribers, IStateManager stateManager)
         {
             _logger = logger;
             this._batchEngineSubscribers = batchEngineSubscribers;
@@ -22,7 +22,7 @@ namespace BusLib.BatchEngineCore.Groups
         {
             if (GroupActions.Start.Id ==message.Action.Id)
             {
-                StartGroup(message.Group);
+                CreateGroup(message.Group);
             }
             else if(GroupActions.Stop.Id == message.Action.Id)
             {
@@ -30,14 +30,14 @@ namespace BusLib.BatchEngineCore.Groups
             }
         }
 
-        private void StopGroup(IGroupEntity group, string message)
+        public void StopGroup(IGroupEntity group, string message)
         {
             //todo mark all pending tasks/processes as stopped
             group.MarkGroupStatus(TaskCompletionStatus.Stopped, ResultStatus.Empty, message);
             //publish group stop message
         }
 
-        private void StartGroup(IGroupEntity group)
+        internal SubmittedGroup CreateGroup(IGroupEntity group)
         {
             var groupLogger = LoggerFactory.GetGroupLogger(group.Id, group.GroupKey);
             groupLogger.Trace("Starting group");
@@ -61,7 +61,7 @@ namespace BusLib.BatchEngineCore.Groups
             {
                 groupLogger.Info("Group stopped by subscriber");
                 StopGroup(group, "Group stopped by subscriber");
-                return;
+                return null;
             }
 
             //todo get group processes and add to queue
@@ -71,7 +71,7 @@ namespace BusLib.BatchEngineCore.Groups
             { 
                 _logger.Error("No process found for group");
                 StopGroup(group, "No process found for group");
-                return;
+                return null;
             }
 
             _logger.Trace($"Submitting processes {groupProcesses.Count}");
@@ -93,7 +93,7 @@ namespace BusLib.BatchEngineCore.Groups
             {
                 groupLogger.Info("Group stopped by subscriber");
                 StopGroup(group, "Group stopped by subscriber");
-                return;
+                return null;
             }
 
             var nextProcesses = GetNextProcesses(null);
@@ -103,7 +103,9 @@ namespace BusLib.BatchEngineCore.Groups
                 var volumeMessage = new ProcessExecutionContext(LoggerFactory.GetProcessLogger(p.Id, p.ProcessKey), p);
                 Bus.Instance.HandleVolumeRequest(volumeMessage);
             });
-            
+
+            SubmittedGroup gGroup=new SubmittedGroup(group, groupProcesses);
+            return gGroup;
         }
 
         private void SubmitProcesses(List<IProcessState> groupProcesses, IGroupEntity groupEntity)
