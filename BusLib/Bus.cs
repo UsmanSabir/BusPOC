@@ -7,6 +7,7 @@ using BusLib.BatchEngineCore.Groups;
 using BusLib.BatchEngineCore.Handlers;
 using BusLib.BatchEngineCore.PubSub;
 using BusLib.BatchEngineCore.Volume;
+using BusLib.Core.Events;
 using BusLib.PipelineFilters;
 
 namespace BusLib
@@ -15,6 +16,7 @@ namespace BusLib
     {
         static Bus _instance;
         public static Bus Instance => _instance ?? (_instance = new Bus());
+        public IEventAggregator EventAggregator { get; private set; }
 
         private Pipeline<TaskMessage> _taskProcessorPipeline;
 

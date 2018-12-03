@@ -70,6 +70,7 @@
     <Compile Include="BatchEngineCore\TaskProducerWorker.cs" />
     <Compile Include="BatchEngineCore\Volume\VolumeRequestMessage.cs" />
     <Compile Include="BatchEngineCore\WatchDog\ProcessWatchDog.cs" />
+    <Compile Include="Core\Events\IEventAggregator.cs" />
     <Compile Include="Core\IErrorNotification.cs" />
     <Compile Include="Core\RepeatingProcess.cs" />
     <Compile Include="Core\WorkerProcess.cs" />

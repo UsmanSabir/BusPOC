@@ -35,6 +35,12 @@ namespace BusLib.Helper
             //todo: send to stateManager queue
         }
 
+        public static bool IsExecuting(this IProcessState process)
+        {
+            return !(process.IsFinished || process.IsStopped);
+        }
+        
+
         internal static string GetFormattedLogMessage(this IProcessExecutionContext context, string msg,
             Exception exception = null)
         {

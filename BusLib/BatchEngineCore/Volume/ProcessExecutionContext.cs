@@ -66,6 +66,7 @@ namespace BusLib.BatchEngineCore
         int GroupId { get; } 
 
         bool IsFinished { get; }
+        bool IsStopped { get; }
         string Criteria { get; }
     }
 }

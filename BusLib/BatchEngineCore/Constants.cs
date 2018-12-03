@@ -11,5 +11,9 @@ namespace BusLib.BatchEngineCore
         public const string ReasonTimeOut = "Timeout";
         public const string ReasonCancelled = "Cancelled";
         public const string ReasonCompleted = "Completed";
+
+
+        //Events
+        public const string EventProcessStopped = "ProcessStopped";
     }
 }

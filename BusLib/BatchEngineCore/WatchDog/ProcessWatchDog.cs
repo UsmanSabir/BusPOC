@@ -41,18 +41,6 @@ namespace BusLib.BatchEngineCore.WatchDog
             //check their tasks
         }
 
-        //todo: any pub/sub triggering point
-        void CheckProcessIdle(int processId, int groupId)
-        {
-            //todo check if process tasks are finished
-            //check deferred tasks
-            //check process retry
-            //complete process
-
-            //get child processes or other pending group processes
-            //send for volume generation
-        }
-
         public void Handle(GroupMessage message)
         {
             if (GroupActions.Start.Id == message.Action.Id)
@@ -89,33 +77,54 @@ namespace BusLib.BatchEngineCore.WatchDog
             
         }
 
-
-        bool CheckProcessHealth(int processId)
+        //todo: any pub/sub triggering point
+        void CheckProcessIdle(int processId, int groupId)
         {
-            bool handled = false;
+            //todo check if process tasks are finished
+            //check deferred tasks
+            //check process retry
+            //complete process
+
+            //get child processes or other pending group processes
+            //send for volume generation
+        }
+
+        bool CheckProcessCompletion(int processId)
+        {
+            Logger.Trace($"Process Watchdog triggered for processId {processId}");
+            IProcessState state = _stateManager.GetProcessById(processId);
+            if (!state.IsExecuting())
+            {
+                Logger.Trace($"Process Watchdog not executing with statue IsStopped {state.IsStopped}, IsFinished {state.IsFinished} for processId {processId}");
+                Bus.Instance.EventAggregator.Publish(Constants.EventProcessStopped, processId.ToString());
+                return false;
+            }
+            bool completed = false;
             var incompleteTasks = _stateManager.GetIncompleteTasksForProcess<ITaskState>(processId).ToList();
             if (incompleteTasks.Any())
             {
-                var defferedTasks = incompleteTasks.Where(d => d.DeferredCount > 0).ToList();
-
+                var deferredTasks = incompleteTasks.Where(d => d.DeferredCount > 0).ToList();
+                Logger.Trace($"Process Watchdog skipped for processId {processId}. {incompleteTasks.Count} incomplete tasks & {deferredTasks.Count} tasks");
+                return false;
             }
             else
             {
                 var erroredTasks = _stateManager.GetFailedTasksForProcess<ITaskState>(processId).ToList();
                 if (erroredTasks.Any())
                 {
+
                     IProcessResumeContext context = null;//todo
                     foreach (var processSubscriber in _batchEngineSubscribers.GetProcessSubscribers())
                     {
                         Robustness.Instance.SafeCall(()=> processSubscriber.OnProcessResume(context), Logger);
                     }
                     //todo goto retry
-                    handled = true;
-                    return handled;
+                    completed = true;
+                    return completed;
                 }
             }
 
-            return handled;
+            return completed;
         }
 
     }
