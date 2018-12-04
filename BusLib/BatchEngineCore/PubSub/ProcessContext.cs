@@ -42,6 +42,36 @@ namespace BusLib.BatchEngineCore.PubSub
         ILogger Logger { get; }
     }
 
+    public interface IProcessRetryContext
+    {
+        int Id { get; }
+        int ProcessKey { get; }
+        ILogger Logger { get; }
+
+        void Stop();
+
+    }
+
+    class ProcessRetryContext: IProcessRetryContext
+    {
+        public ProcessRetryContext(int id, int processKey, ILogger logger)
+        {
+            Id = id;
+            ProcessKey = processKey;
+            Logger = logger;
+        }
+
+        public int Id { get; }
+        public int ProcessKey { get; }
+        public ILogger Logger { get; }
+
+        internal bool StopFlag { get; set; } = false;
+        public void Stop()
+        {
+            StopFlag = true;
+        }
+    }
+
     internal class ProcessSubmittedContext: IProcessSubmittedContext
     {
         public ProcessSubmittedContext(int id, int processKey, bool isResubmission, string submittedBy, ILogger logger)

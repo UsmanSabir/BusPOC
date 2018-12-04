@@ -68,5 +68,6 @@ namespace BusLib.BatchEngineCore
         bool IsFinished { get; }
         bool IsStopped { get; }
         string Criteria { get; }
+        DateTime? StartTime { get; }
     }
 }

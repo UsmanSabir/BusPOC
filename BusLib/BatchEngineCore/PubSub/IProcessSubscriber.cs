@@ -16,6 +16,6 @@ namespace BusLib.BatchEngineCore.PubSub
 
         void OnProcessResume(IProcessResumeContext context);
 
-        void OnProcessRetry(IProcessResumeContext context);
+        void OnProcessRetry(IProcessRetryContext context);
     }
 }

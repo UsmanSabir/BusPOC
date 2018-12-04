@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using BusLib.BatchEngineCore.PubSub;
 using BusLib.BatchEngineCore.Volume;
 using BusLib.Core;
 using BusLib.Helper;
@@ -17,6 +18,7 @@ namespace BusLib.BatchEngineCore
         private ICacheAside _cacheAside;
         ManualResetEvent _pauseHandler=new ManualResetEvent(true);
         private IFrameworkLogger _logger;
+        private readonly IStateManager _stateManager;
 
         readonly ConcurrentDictionary<int, Pipeline<IProcessExecutionContext>> _processPipelines = new ConcurrentDictionary<int, Pipeline<IProcessExecutionContext>>();
         private int _delayInRetries = 3000; //todo
@@ -82,7 +84,7 @@ namespace BusLib.BatchEngineCore
                 var processConfig = _cacheAside.GetProcessConfiguration(key);
                 var maxVolumeRetries = processConfig.MaxVolumeRetries;
 
-                Pipeline<IProcessExecutionContext> pipeline=new Pipeline<IProcessExecutionContext>(new VolumeGenerator(process));
+                Pipeline<IProcessExecutionContext> pipeline = new Pipeline<IProcessExecutionContext>(new VolumeGenerator(process, _stateManager));
                 
                 if (maxVolumeRetries != 0) // -1 means unlimited retries
                 {
@@ -90,6 +92,18 @@ namespace BusLib.BatchEngineCore
                         new RetryFeatureHandler<IProcessExecutionContext>(maxVolumeRetries,
                             _delayInRetries, _logger));
                 }
+
+                var duplicateCheckFilter = new DuplicateCheckFilter<IProcessExecutionContext,int>( (context => context.ProcessState.Id), $"VolumeGenerator{processKey}", _logger);
+                pipeline.RegisterFeatureDecorator(duplicateCheckFilter);
+                var refr=new WeakReference<DuplicateCheckFilter<IProcessExecutionContext, int>>(duplicateCheckFilter); //todo
+                Bus.Instance.EventAggregator.Subscribe<ProcessGroupRemovedMessage>(msg =>
+                {
+                    if (refr.TryGetTarget(out DuplicateCheckFilter<IProcessExecutionContext, int> filt))
+                    {
+                        filt.Cleanup(msg.Group.ProcessEntities.Select(r => r.Id));
+                    }
+                });
+                pipeline.RegisterFeatureDecorator(new ThrottlingFilter<IProcessExecutionContext>(1, _logger));
 
                 return pipeline;
             });
@@ -104,10 +118,12 @@ namespace BusLib.BatchEngineCore
         class VolumeGenerator:IHandler<IProcessExecutionContext>
         {
             private readonly IBaseProcess _process;
+            private readonly IStateManager _stateManager;
 
-            public VolumeGenerator(IBaseProcess process)
+            public VolumeGenerator(IBaseProcess process, IStateManager stateManager)
             {
                 _process = process;
+                _stateManager = stateManager;
             }
 
             public void Handle(IProcessExecutionContext message)
@@ -116,8 +132,12 @@ namespace BusLib.BatchEngineCore
 
                 IVolumeHandler volumeHandler = null; //todo initialize based on configuration or fixed?
 
-
-
+                var processState = _stateManager.GetProcessById(message.ProcessState.Id);
+                if (ProcessStatus.New.Id != processState.Status.Id || processState.IsStopped)
+                {
+                    message.Logger.Warn("Cannot generate volume if process is not 'New' or process is Stopped");
+                    return;
+                }
                 _process.HandleVolume(volumeHandler, message);
                 message.Logger.Info("Volume generated successfully ");
 
@@ -130,7 +150,7 @@ namespace BusLib.BatchEngineCore
                 }
 
                 message.Logger.Trace("Marking process as Generated");
-                message.MarkAsVolumeGenerated();
+                message.ProcessState.MarkAsVolumeGenerated();
                 
             }
 

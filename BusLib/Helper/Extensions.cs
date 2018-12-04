@@ -30,14 +30,14 @@ namespace BusLib.Helper
             //todo: send to stateManager queue
         }
         
-        public static void MarkAsVolumeGenerated(this IProcessExecutionContext context)
+        public static void MarkAsVolumeGenerated(this IProcessState context)
         {
             //todo: send to stateManager queue
         }
 
         public static bool IsExecuting(this IProcessState process)
         {
-            return !(process.IsFinished || process.IsStopped);
+            return !(process.IsFinished || process.IsStopped) && process.StartTime.HasValue;
         }
         
 
@@ -47,6 +47,20 @@ namespace BusLib.Helper
             return
                 $"{msg ?? string.Empty} for process Id: {context.ProcessState.Id}, Key: {context.ProcessState.ProcessKey}, CorrelationId: {context.ProcessState.CorrelationId}{(exception != null ? exception.ToString() : string.Empty)}";
         }
+
+        public static void MarkProcessStatus(this IProcessState state, TaskCompletionStatus completionStatus, ResultStatus result, string reason)
+        {
+            //todo: 
+            throw new NotImplementedException();
+        }
+
+        public static void RetryProcess(this IProcessState state)
+        {
+            //todo: update retrycount, start time and reset error tasks
+            throw new NotImplementedException();
+        }
+
+        
 
         internal static void ReloadTaskState(this TaskContext context, string prevState, string nextState, ConcurrentDictionary<string, string> taskStatesCollection)
         {

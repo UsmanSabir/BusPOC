@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using BusLib.Core;
+using BusLib.Helper;
 
 namespace BusLib.PipelineFilters
 {
@@ -70,6 +71,8 @@ namespace BusLib.PipelineFilters
         //todo
         private bool IsTransient(Exception ex)
         {
+            return TransientFaultHandling.IsTransient(ex);
+
             // Determine if the exception is transient.
             // In some cases this is as simple as checking the exception type, in other
             // cases it might be necessary to inspect other properties of the exception.

@@ -14,6 +14,10 @@ namespace BusLib.BatchEngineCore
 
 
         //Events
-        public const string EventProcessStopped = "ProcessStopped";
+        //public const string EventProcessStopped = "ProcessStopped";
+        public const string EventProcessRetry = "ProcessRetry";
+        public const string EventProcessStop = "ProcessStop";
+        public const string EventProcessFinished = "ProcessFinished";
     }
 }
+

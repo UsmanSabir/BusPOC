@@ -20,4 +20,19 @@ namespace BusLib.Messages
         public Type FeatureHandlerType { get; private set; }
         public bool Enable { get; private set; }
     }
+
+    public class SystemCommand : ISystemCommand
+    {
+        public SystemCommand(string pipeLineKey, Type featureType, bool enable)
+        {
+            PipeLineKey = pipeLineKey;
+            FeatureHandlerType = featureType;
+            Enable = enable;
+        }
+
+        public string PipeLineKey { get; private set; } // => nameof(ICommand);
+
+        public Type FeatureHandlerType { get; private set; }
+        public bool Enable { get; private set; }
+    }
 }

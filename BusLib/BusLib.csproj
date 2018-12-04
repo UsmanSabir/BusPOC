@@ -81,6 +81,7 @@
     <Compile Include="Helper\Robustness.cs" />
     <Compile Include="Helper\TransientFaultHandling.cs" />
     <Compile Include="PipelineFilters\ConsumerFilter.cs" />
+    <Compile Include="PipelineFilters\DuplicateCheckFilter.cs" />
     <Compile Include="PipelineFilters\RetryFeatureHandler.cs" />
     <Compile Include="PipelineFilters\TasksThrottlingFilter.cs" />
     <Compile Include="PipelineFilters\ThrottlingFilter.cs" />

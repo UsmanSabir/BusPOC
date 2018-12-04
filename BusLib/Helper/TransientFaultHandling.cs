@@ -15,7 +15,8 @@ namespace BusLib.Helper
         {
             if (ex is WebException webException)
             {
-                return webException.Status == WebExceptionStatus.ProtocolError || webException.Status == WebExceptionStatus.ConnectionClosed;                
+                return webException.Status == WebExceptionStatus.ProtocolError || webException.Status == WebExceptionStatus.ConnectionClosed || 
+                       webException.Status == WebExceptionStatus.Timeout || webException.Status == WebExceptionStatus.RequestCanceled;
             }
             else if(ex is SqlException sqlException)
             {

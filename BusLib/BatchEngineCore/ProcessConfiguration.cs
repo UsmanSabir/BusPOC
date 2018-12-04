@@ -12,7 +12,12 @@ namespace BusLib.BatchEngineCore
 
         public int BatchSize { get; set; }
 
+        public int? ProcessTimeoutMins { get; set; }
+
         public int? TaskTimeout { get; set; }
+
+        public int? ProcessRetries { get; set; }
+        
 
         public int? TaskRetries { get; set; }
 

@@ -426,7 +426,7 @@ namespace BusLib.BatchEngineCore.Handlers
                 when (!(ex is ThreadAbortException) && !(ex is ThreadInterruptedException) && !(ex is OperationCanceledException)) //propogate cancel exceptions
                 {                    
                     currentRetry++;
-
+                    //task.State.FailedCount //todo increment
                     if (currentRetry > maxRetries || !IsTransient(task, ex))
                     {
                         throw;
