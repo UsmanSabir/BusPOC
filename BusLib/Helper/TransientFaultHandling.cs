@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -26,12 +27,23 @@ namespace BusLib.Helper
             {
                 return true;
             }
+            else if(ex is IOException ioe)
+            {
+                bool transnt = ioe.Message.Contains("An existing connection was forcibly closed");
+                return transnt;
+            }
             else if(ex is FrameworkException)
             {
                 return false;
             }
+            else if (ex is NotImplementedException)
+            {
+                return false;
+            }
 
-            return true;
+            bool retry = ex.Message.Contains("An existing connection was forcibly closed");
+            return retry;
+            return true; //todo rethink
         }
 
         private static bool IsSqlExceptionTransient(SqlException sqlException)
@@ -102,6 +114,7 @@ namespace BusLib.Helper
                     // DBNETLIB Error Code: 20
                     // The instance of SQL Server you attempted to connect to does not support encryption.
                     case 20:
+                    case -2: // timeout
                         return true;
                 }
             }

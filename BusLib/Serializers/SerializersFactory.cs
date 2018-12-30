@@ -16,12 +16,12 @@ namespace BusLib.Serializers
         }
 
         readonly ConcurrentDictionary<Type, ISerializer> _serializers;
-        readonly ISerializer _defaultSerializer;
+        internal ISerializer DefaultSerializer { get; set; }
 
         public SerializersFactory()
         {
             _serializers = new ConcurrentDictionary<Type, ISerializer>();
-            _defaultSerializer = new ObjectSerializer();
+            DefaultSerializer = new ObjectSerializer();
             PrimitiveSerializer defaultSer = new PrimitiveSerializer();
 
 
@@ -48,7 +48,7 @@ namespace BusLib.Serializers
             {
                 return serializer;
             }
-            return _defaultSerializer;
+            return DefaultSerializer;
         }
     }
 }

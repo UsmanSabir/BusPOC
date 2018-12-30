@@ -33,7 +33,7 @@ namespace BusLib.Helper
                     if (propagate)  //(exceptionPropagateFilter != null && exceptionPropagateFilter(ex))
                         throw;
 
-                    var logMessage = msg ?? $"Robustness.SafeCall has error '{ex.Message}'";
+                    var logMessage = msg==null? $"Robustness.SafeCall has error '{ex.Message}'": string.Format(msg, ex);
                     logger?.Warn(logMessage, ex);
 
                     currentRetry++;
@@ -65,6 +65,52 @@ namespace BusLib.Helper
         public void SafeCall(Action action, ILogger logger, string msg, Predicate<Exception> exceptionPropagateFilter)
         {
             SafeCallWithRetry(action, 0, 0, logger, msg, exceptionPropagateFilter);
+        }
+
+        public void ExecuteUntilTrue(Action action, int maxRetries= Int32.MaxValue)
+        {
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    action?.Invoke();
+                    return;
+                }
+                catch (Exception)
+                {
+                    if (i == maxRetries - 1) throw;
+
+                    SleepBackOffMultiplier(i);
+                }
+            }
+        }
+
+        public void ExecuteUntilTrue(Action action, CancellationToken token)
+        {
+            do
+            {
+                try
+                {
+                    action?.Invoke();
+                    return;
+                }
+                catch (Exception)
+                {
+                    if (!token.IsCancellationRequested)
+                        SleepBackOffMultiplier(3);
+                }
+            } while (!token.IsCancellationRequested);
+        }
+
+
+        private static void SleepBackOffMultiplier(int i)
+        {
+            //exponential/random retry back-off.
+            var rand = new Random(Guid.NewGuid().GetHashCode());
+            var nextTry = rand.Next(
+                (int)Math.Pow(i, 2), (int)Math.Pow(i + 1, 2) + 1);
+
+            Thread.Sleep(nextTry);
         }
     }
 }

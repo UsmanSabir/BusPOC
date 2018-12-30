@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusLib.BatchEngineCore.Handlers;
 
 namespace BusLib.BatchEngineCore.Saga
 {
-    public interface ITaskSaga<in T> : ITask<T, ITaskContext>
+    internal interface ITaskSaga<in T> : ITask<T, TaskContext>
     {
         
     }

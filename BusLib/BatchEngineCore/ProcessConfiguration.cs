@@ -6,24 +6,24 @@ using System.Threading.Tasks;
 
 namespace BusLib.BatchEngineCore
 {
-    public class ProcessConfiguration
+    public interface IProcessConfiguration
     {
-        public int ProcessKey { get; set; }
+        int ProcessKey { get;  }
 
-        public int BatchSize { get; set; }
+        int BatchSize { get; }
 
-        public int? ProcessTimeoutMins { get; set; }
+        int? ProcessTimeoutMins { get;  }
 
-        public int? TaskTimeout { get; set; }
+        int? TaskTimeout { get;  }
 
-        public int? ProcessRetries { get; set; }
+        int? ProcessRetries { get; }
         
 
-        public int? TaskRetries { get; set; }
+        int? TaskRetries { get;  }
 
-        public int? RetryDelayMilli { get; set; }
+        int? RetryDelayMilli { get; }
 
-        public int MaxVolumeRetries { get; set; }
-        public int? QueueSize { get; set; }
+        int MaxVolumeRetries { get; }
+        int? QueueSize { get;  }
     }
 }

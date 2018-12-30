@@ -12,7 +12,7 @@ namespace BusLib.Core
     {
         IFeatureHandler<T> _featureHandler=null;
         readonly IHandler<T> _handler;
-        List<IFeatureHandler<T>> _featureHandlersCollection = new List<IFeatureHandler<T>>();
+        readonly List<IFeatureHandler<T>> _featureHandlersCollection = new List<IFeatureHandler<T>>();
 
         IHandler<T> rootHandler => _featureHandler ?? _handler;
 

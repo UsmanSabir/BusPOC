@@ -1,8 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using BusLib.BatchEngineCore.PubSub;
 using BusLib.Core;
 using BusLib.Helper;
+using BusLib.Serializers;
 
 namespace BusLib.BatchEngineCore.Groups
 {
@@ -11,44 +14,98 @@ namespace BusLib.BatchEngineCore.Groups
         private readonly IBatchEngineSubscribers _batchEngineSubscribers;
         private readonly ILogger _logger;
         private readonly IStateManager _stateManager;
-        public GroupsHandler(ILogger logger, IBatchEngineSubscribers batchEngineSubscribers, IStateManager stateManager)
+        private readonly ISerializersFactory _serializersFactory;
+        private readonly IEntityFactory _entityFactory;
+
+        public GroupsHandler(ILogger logger, IBatchEngineSubscribers batchEngineSubscribers, IStateManager stateManager, ISerializersFactory serializersFactory, IEntityFactory entityFactory)
         {
             _logger = logger;
-            this._batchEngineSubscribers = batchEngineSubscribers;
+            _batchEngineSubscribers = batchEngineSubscribers;
             _stateManager = stateManager;
+            _serializersFactory = serializersFactory;
+            _entityFactory = entityFactory;
         }
 
-        public void Handle(GroupMessage message)
+        //public void Handle(GroupMessage message)
+        //{
+        //    if (GroupActions.Start.Id ==message.Action.Id)
+        //    {
+        //        if (message.IsProcessSubmission)
+        //        {
+        //            CreateProcesses(message.Group, message.ProcessKeys, message.Criteria);
+        //        }
+        //        else
+        //        {
+        //            CreateGroup(message.Group, message.Criteria);
+        //        }
+                
+        //    }
+        //    else if(GroupActions.Stop.Id == message.Action.Id)
+        //    {
+        //        StopGroup(message.Group, message.Message);
+        //    }
+        //}
+
+        public SubmittedGroup HandleStartMessage(GroupMessage message)
         {
-            if (GroupActions.Start.Id ==message.Action.Id)
+            if (GroupActions.Start == message.Action)
             {
-                CreateGroup(message.Group);
+                List<int> groupProcesses;
+
+                if (!message.IsProcessSubmission)
+                {
+                    groupProcesses = GetGroupProcesses(message.Group.GroupKey);
+
+
+                    //}
+                    //else
+                    //{
+                    //    return CreateGroup(message.Group, message.Criteria);
+                    //}
+                }
+                else
+                {
+                    groupProcesses = message.ProcessKeys;
+                }
+
+                return CreateProcesses(message.Group, groupProcesses, message.Criteria);
             }
-            else if(GroupActions.Stop.Id == message.Action.Id)
-            {
-                StopGroup(message.Group, message.Message);
-            }
+            return null; //todo not a group start message
         }
 
-        public void StopGroup(IGroupEntity group, string message)
+        public void StopGroup(IReadWritableGroupEntity group, string message)
         {
-            //todo mark all pending tasks/processes as stopped
-            group.MarkGroupStatus(TaskCompletionStatus.Stopped, ResultStatus.Empty, message);
-            //publish group stop message
+            _logger.Info($"Stopping group with message {message}");
+
+            _stateManager.MarkGroupStopped(group);
+            ////todo mark all pending tasks/processes as stopped
+            //group.MarkGroupStatus(CompletionStatus.Stopped, ResultStatus.Empty, message);
+            ////publish group stop message
         }
 
-        internal SubmittedGroup CreateGroup(IGroupEntity group)
+        internal SubmittedGroup CreateProcesses(IReadWritableGroupEntity @group, List<int> processKeys,
+            List<ProcessExecutionCriteria> messageCriteria)
         {
             var groupLogger = LoggerFactory.GetGroupLogger(group.Id, group.GroupKey);
             groupLogger.Trace("Starting group");
 
-            GroupStartContext context = new GroupStartContext(group, groupLogger);
+
+            if (processKeys ==null || processKeys.Count == 0)
+            {
+                _logger.Error("No process found for group");
+                StopGroup(@group, "No process found for group");
+                return null;
+            }
+
+            var serializer = _serializersFactory.GetSerializer<ProcessExecutionCriteria>();
+
+            GroupStartContext context = new GroupStartContext(group, groupLogger, messageCriteria);
 
             var groupSubscribers = _batchEngineSubscribers.GetGroupSubscribers().ToList();
 
             foreach (var groupSubscriber in groupSubscribers)
             {
-                if (groupSubscriber.GroupKey!=group.GroupKey)
+                if (groupSubscriber.GroupKey != group.GroupKey)
                 {
                     continue;
                 }
@@ -56,7 +113,7 @@ namespace BusLib.BatchEngineCore.Groups
                 Robustness.Instance.SafeCall(() => { groupSubscriber.OnGroupStarting(context); }, groupLogger);
                 context.CurrentSubscriber = null;
             }
-            
+
             if (context.StopFlag)
             {
                 groupLogger.Info("Group stopped by subscriber");
@@ -65,18 +122,64 @@ namespace BusLib.BatchEngineCore.Groups
             }
 
             //todo get group processes and add to queue
-            var groupProcesses = GetGroupProcesses(group.GroupKey);
+            List<(ProcessExecutionCriteria Criteria, IReadWritableProcessState ProcessState)> process2Submit = new List<(ProcessExecutionCriteria Criteria, IReadWritableProcessState ProcessState)>(); // List<IReadWritableProcessState>();
 
-            if (groupProcesses.Count == 0)
-            { 
+            List<IReadWritableProcessState> processList = new List<IReadWritableProcessState>();
+
+            foreach (var processKey in processKeys)
+            {
+                var process = _entityFactory.CreateProcessEntity();
+                process.ProcessKey = processKey;
+                //IReadWritableProcessState process = erf wer GetKeyProcesses(processKey);
+                //IWritableProcessState writableProcess = process;
+                process.GroupId = group.Id;
+                
+                //process.CorrelationId=Guid.NewGuid();
+                processList.Add(process);
+            }
+
+            
+            if (processList.Count == 0)
+            {
                 _logger.Error("No process found for group");
                 StopGroup(group, "No process found for group");
                 return null;
             }
 
-            _logger.Trace($"Submitting processes {groupProcesses.Count}");
-            SubmitProcesses(groupProcesses, group);
-            _logger.Trace($"Submission complete of {groupProcesses.Count} processes");
+            //if (messageCriteria.Count == 1)
+            //{
+            //    var cta = messageCriteria[0];
+            //    process2submit.AddRange(processList.Select(s =>
+            //    {
+            //        ((IWritableProcessState)s).Criteria = serializer.SerializeToString(cta);
+            //        return s;
+            //    }));
+            //}
+            //else
+            {
+                foreach (var criteria in messageCriteria)
+                {
+                    foreach (var process in processList)
+                    {
+                        var p = process.Clone(_entityFactory);
+                        p.Criteria = serializer.SerializeToString(criteria);
+                        p.CorrelationId=Guid.NewGuid();
+                        process.CompanyId = criteria.CompanyId;
+                        process.BranchId = criteria.BranchId;
+                        process.SubTenantId = criteria.SubTenantId;
+                        p.ProcessingDate = criteria.ProcessingDate;
+                        p.Status= CompletionStatus.Pending;
+                        p.Result = ResultStatus.Empty;
+                        //p.Tag = criteria.Tag; //todo
+                        process2Submit.Add((criteria, p));
+                    }
+                }
+            }
+
+
+            _logger.Trace($"Submitting processes {process2Submit.Count}");
+            SubmitProcesses(process2Submit, group);
+            _logger.Trace($"Submission complete of {process2Submit.Count} processes");
 
             foreach (var groupSubscriber in groupSubscribers)
             {
@@ -96,19 +199,127 @@ namespace BusLib.BatchEngineCore.Groups
                 return null;
             }
 
-            var nextProcesses = GetNextProcesses(null);
+            //var nextProcesses = GetNextProcesses(null);
 
-            nextProcesses.ForEach(p =>
-            {
-                var volumeMessage = new ProcessExecutionContext(LoggerFactory.GetProcessLogger(p.Id, p.ProcessKey), p);
-                Bus.Instance.HandleVolumeRequest(volumeMessage);
-            });
+            //nextProcesses.ForEach(p =>
+            //{
+            //    var volumeMessage = new ProcessExecutionContext(LoggerFactory.GetProcessLogger(p.Id, p.ProcessKey), p);
+            //    Bus.Instance.HandleVolumeRequest(volumeMessage);
+            //});
 
-            SubmittedGroup gGroup=new SubmittedGroup(group, groupProcesses);
+            SubmittedGroup gGroup = new SubmittedGroup(group, process2Submit.Select(s=>s.ProcessState).ToList());
             return gGroup;
         }
 
-        private void SubmitProcesses(List<IProcessState> groupProcesses, IGroupEntity groupEntity)
+        //private IReadWritableProcessState GetKeyProcesses(int processKey)
+        //{
+        //    var processState = _stateManager.GetProcessByKey(processKey);
+        //    return processState;
+        //}
+
+        #region GroupSubmit(Commented)
+
+        //internal SubmittedGroup CreateGroup(IGroupEntity @group, List<ProcessExecutionCriteria> messageCriteria)
+        //{
+        //    var groupLogger = LoggerFactory.GetGroupLogger(group.Id, group.GroupKey);
+        //    groupLogger.Trace("Starting group");
+        //    var serializer = _serializersFactory.GetSerializer<ProcessExecutionCriteria>();
+
+        //    GroupStartContext context = new GroupStartContext(group, groupLogger, messageCriteria);
+
+        //    var groupSubscribers = _batchEngineSubscribers.GetGroupSubscribers().ToList();
+
+        //    foreach (var groupSubscriber in groupSubscribers)
+        //    {
+        //        if (groupSubscriber.GroupKey!=group.GroupKey)
+        //        {
+        //            continue;
+        //        }
+        //        context.CurrentSubscriber = groupSubscriber;
+        //        Robustness.Instance.SafeCall(() => { groupSubscriber.OnGroupStarting(context); }, groupLogger);
+        //        context.CurrentSubscriber = null;
+        //    }
+
+        //    if (context.StopFlag)
+        //    {
+        //        groupLogger.Info("Group stopped by subscriber");
+        //        StopGroup(group, "Group stopped by subscriber");
+        //        return null;
+        //    }
+
+        //    //todo get group processes and add to queue
+        //    List<(ProcessExecutionCriteria Criteria, IReadWritableProcessState ProcessState)> process2submit = new List<(ProcessExecutionCriteria Criteria, IReadWritableProcessState ProcessState)>(); // List<IReadWritableProcessState>();
+        //    //List<IProcessState> process2submit=new List<IProcessState>();
+        //    var groupProcesses = GetGroupProcesses(@group.GroupKey);
+
+        //    if (groupProcesses.Count == 0)
+        //    { 
+        //        _logger.Error("No process found for group");
+        //        StopGroup(group, "No process found for group");
+        //        return null;
+        //    }
+
+        //    //if (messageCriteria.Count == 1)
+        //    //{
+        //    //    var cta = messageCriteria[0];
+        //    //    process2submit.AddRange(groupProcesses.Select(s =>
+        //    //    {
+        //    //        s.Criteria = cta;
+        //    //        return s;
+        //    //    }));
+        //    //}
+        //    //else
+        //    {
+        //        foreach (var criteria in messageCriteria)
+        //        {
+        //            foreach (var process in groupProcesses)
+        //            {
+        //                var p = process.Clone(_entityFactory);
+        //                p.Criteria = serializer.SerializeToString(criteria);
+        //                p.CorrelationId=Guid.NewGuid();
+        //                process2submit.Add((criteria, p));
+        //            }
+        //        }
+        //    }
+
+
+        //    _logger.Trace($"Submitting processes {process2submit.Count}");
+        //    SubmitProcesses(process2submit, group);
+        //    _logger.Trace($"Submission complete of {process2submit.Count} processes");
+
+        //    foreach (var groupSubscriber in groupSubscribers)
+        //    {
+        //        if (groupSubscriber.GroupKey != group.GroupKey)
+        //        {
+        //            continue;
+        //        }
+        //        context.CurrentSubscriber = groupSubscriber;
+        //        Robustness.Instance.SafeCall(() => { groupSubscriber.OnGroupSubmitted(context); }, groupLogger);
+        //        context.CurrentSubscriber = null;
+        //    }
+
+        //    if (context.StopFlag)
+        //    {
+        //        groupLogger.Info("Group stopped by subscriber");
+        //        StopGroup(group, "Group stopped by subscriber");
+        //        return null;
+        //    }
+
+        //    //var nextProcesses = GetNextProcesses(null);
+
+        //    //nextProcesses.ForEach(p =>
+        //    //{
+        //    //    var volumeMessage = new ProcessExecutionContext(LoggerFactory.GetProcessLogger(p.Id, p.ProcessKey), p);
+        //    //    Bus.Instance.HandleVolumeRequest(volumeMessage);
+        //    //});
+
+        //    SubmittedGroup gGroup=new SubmittedGroup(group, process2submit.Select(s=>s.ProcessState).ToList());
+        //    return gGroup;
+        //}
+
+        #endregion
+
+        private void SubmitProcesses(List<(ProcessExecutionCriteria Criteria, IReadWritableProcessState ProcessState)> groupProcesses, IGroupEntity groupEntity)
         {
             //groupProcesses.ForEach(p =>
             //{
@@ -117,53 +328,57 @@ namespace BusLib.BatchEngineCore.Groups
             //});
 
 
-            //todo
-            using (var trans = _stateManager.BeginTransaction())
-            {
-                foreach (var process in groupProcesses)
-                {
-                    _stateManager.Insert(process);
-                }
+            var processStates = groupProcesses.Select(s=>s.ProcessState).ToList();
+            _stateManager.AddGroupProcess(processStates);
 
-                trans.Commit();
-            }
+            //todo
+            //using (var trans = _stateManager.BeginTransaction())
+            //{
+            //    foreach (var process in groupProcesses)
+            //    {
+            //        _stateManager.Insert(process);
+            //    }
+
+            //    trans.Commit();
+            //}
 
 
             var subscribers = _batchEngineSubscribers.GetProcessSubscribers().ToList();
             if (subscribers.Count > 0)
             {
-                groupProcesses.ForEach(p =>
+                foreach (var p in groupProcesses)
                 {
-                    var processSubscribers = subscribers.Where(s=>s.ProcessKey== p.ProcessKey).ToList();
+                    var processState = p.ProcessState;
+                    var processSubscribers = subscribers.Where(s=>s.ProcessKey== processState.ProcessKey).ToList();
                     if (processSubscribers.Count > 0)
                     {
-                        ProcessSubmittedContext pContext = new ProcessSubmittedContext(p.Id, p.ProcessKey, groupEntity.IsResubmission, groupEntity.SubmittedBy, LoggerFactory.GetProcessLogger(p.Id, p.ProcessKey));
+                        ProcessSubmittedContext pContext = new ProcessSubmittedContext(processState.Id, processState.ProcessKey, groupEntity.IsResubmission, groupEntity.SubmittedBy, p.Criteria, LoggerFactory.GetProcessLogger(processState.Id, processState.ProcessKey));
                         foreach (var subscriber in subscribers)
                         {
                             Robustness.Instance.SafeCall(() => subscriber.OnProcessSubmitted(pContext));
                         }
                     }
-                });
+                }
             }
 
             
         }
 
 
-        List<IProcessState> GetGroupProcesses(int groupId)
+        List<int> GetGroupProcesses(int groupId)
         {
-            List<IProcessState> processes=null; //todo
+            var processes=_stateManager.GetConfiguredGroupProcessKeys(groupId).ToList(); //todo
             return processes;
         }
 
-        List<IProcessState> GetNextProcesses(int? parentProcessId)
-        {
-            _logger.Trace($"");
-            List<IProcessState> groupProcesses=null;
+        //List<IProcessState> GetNextProcesses(int? parentProcessId)
+        //{
+        //    _logger.Trace($"");
+        //    List<IProcessState> groupProcesses=null;
 
-            var nextProcess = groupProcesses.Where(p=>p.ParentId==parentProcessId).ToList();
-            return nextProcess;
-        }
+        //    var nextProcess = groupProcesses.Where(p=>p.ParentId==parentProcessId).ToList();
+        //    return nextProcess;
+        //}
 
         public void Dispose()
         {

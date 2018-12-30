@@ -3,26 +3,70 @@ using BusLib.Core;
 
 namespace BusLib.BatchEngineCore
 {
+    //todo
     public class LoggerFactory
     {
-        public static ILogger GetSystemLogger()
+        internal static IFrameworkLogger GetSystemLogger()
         {
-            throw new NotImplementedException();
+            return new ConsoleLogger();
         }
 
-        public static ILogger GetTaskLogger(int taskId, int processId, Guid correlationId)
+        public static ILogger GetTaskLogger(long taskId, long processId, Guid correlationId)
         {
-            throw new NotImplementedException();
+            return new ConsoleLogger();
         }
 
-        public static ILogger GetGroupLogger(int groupId, int groupKey)
+        public static ILogger GetGroupLogger(long groupId, int groupKey)
         {
-            throw new NotImplementedException();
+            return new ConsoleLogger();
         }
 
-        public static ILogger GetProcessLogger(int processId, int processKey)
+        public static ILogger GetProcessLogger(long processId, long processKey)
         {
-            throw new NotImplementedException();
+            return new ConsoleLogger();
+        }
+    }
+
+    class ConsoleLogger:ILogger, IFrameworkLogger
+    {
+        public void Trace(string message)
+        {
+            Console.WriteLine(message);
+        }
+
+        public void Info(string info)
+        {
+            Console.WriteLine(info);
+        }
+
+        public void Warn(string warn)
+        {
+            Console.WriteLine(warn);
+        }
+
+        public void Warn(string message, Exception e)
+        {
+            Console.WriteLine(message + e.ToString());
+        }
+
+        public void Error(string error)
+        {
+            Console.WriteLine(error);
+        }
+
+        public void Error(string error, Exception exception)
+        {
+            Console.WriteLine(error + exception);
+        }
+
+        public void Fetal(string error)
+        {
+            Console.WriteLine(error);
+        }
+
+        public void Fetal(string error, Exception exception)
+        {
+            Console.WriteLine(error + exception);
         }
     }
 }

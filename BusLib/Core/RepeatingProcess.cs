@@ -56,7 +56,7 @@ namespace BusLib.Core
                 var fred = Thread.CurrentThread;
                 if (fred.Name == null)
                 {
-                    Logger.Warn($"Anonymous thread {fred.ManagedThreadId} running as '{this.Name}'.");
+                    //Logger.Warn($"Anonymous thread {fred.ManagedThreadId} running as '{this.Name}'.");
                 }
 
                 try
@@ -94,9 +94,9 @@ namespace BusLib.Core
             else
                 Interrupter = CancellationTokenSource.CreateLinkedTokenSource(parentToken);
 
-            Completion = Task.Factory.StartNew(PerformRepeatedly); //parentToken
-
             Robustness.Instance.SafeCall(OnStart, Logger);
+
+            Completion = Task.Factory.StartNew(PerformRepeatedly, parentToken, TaskCreationOptions.LongRunning, TaskScheduler.Default); //parentToken
         }
 
         protected void Stop()
@@ -115,8 +115,8 @@ namespace BusLib.Core
                     return true;
                 });
             }
-            Interrupter?.Dispose();
-            Interrupter = null;
+            //Interrupter?.Dispose();
+            //Interrupter = null;
             Completion = null;
         }
 

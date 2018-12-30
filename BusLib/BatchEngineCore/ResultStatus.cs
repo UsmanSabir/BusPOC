@@ -23,6 +23,9 @@ namespace BusLib.BatchEngineCore
 
         public static ResultStatus FromName(string name)
         {
+            if (string.IsNullOrWhiteSpace(name))
+                return Empty;
+
             var state = List()
                 .SingleOrDefault(s => String.Equals(s.Name, name, StringComparison.CurrentCultureIgnoreCase));
 
@@ -80,7 +83,7 @@ namespace BusLib.BatchEngineCore
 
         private class EmptyResultStatus : ResultStatus
         {
-            public EmptyResultStatus() : base(4, "Empty")
+            public EmptyResultStatus() : base(4, "Pending")
             {
 
             }

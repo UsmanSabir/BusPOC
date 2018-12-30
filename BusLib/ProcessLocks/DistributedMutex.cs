@@ -2,28 +2,45 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using BusLib.BatchEngineCore;
+using BusLib.BatchEngineCore.Exceptions;
 using BusLib.Core;
+using BusLib.Helper;
 
 namespace BusLib.ProcessLocks
 {
     public abstract class DistributedMutex
     {
-        private static readonly TimeSpan RenewInterval = TimeSpan.FromSeconds(45);
-        private static readonly TimeSpan AcquireAttemptInterval = TimeSpan.FromSeconds(65);
-        private readonly string _key;
-        private readonly Func<CancellationToken, Task> _taskToRunWhenLockAcquired;
-        private readonly ILogger _logger;
+        protected internal const int RenewIntervalSecs = 5; //45;
+        protected internal const int AcquireAttemptIntervalSecs = 7;// 65;
 
-        protected DistributedMutex(string key, Func<CancellationToken, Task> taskToRunWhenLockAcquired, ILogger logger)
+        private static readonly TimeSpan RenewInterval = TimeSpan.FromSeconds(RenewIntervalSecs);
+        private static readonly TimeSpan AcquireAttemptInterval = TimeSpan.FromSeconds(AcquireAttemptIntervalSecs);
+        protected readonly string Key;
+        private readonly Func<CancellationToken, Task> _taskToRunWhenLockAcquired;
+        private Action _secondaryAction;
+        private readonly IFrameworkLogger _logger;
+        private TaskCompletionSource<bool> _initializerCompletionSource;
+
+        protected DistributedMutex(string key, Func<CancellationToken, Task> taskToRunWhenLockAcquired, Action secondaryAction)
         {
-            _key = key;
+            Key = key;
             _taskToRunWhenLockAcquired = taskToRunWhenLockAcquired;
-            _logger = logger;
+            _secondaryAction = secondaryAction;
+            _logger = LoggerFactory.GetSystemLogger();
         }
 
-        public async Task RunTaskWhenMutexAcquired(CancellationToken token)
+        public Task RunTaskWhenMutexAcquired(CancellationToken token)
         {
-            await RunTaskWhenLockAcquired(token);
+            if (_initializerCompletionSource != null)
+                throw new FrameworkException("Mutex already initialized");
+
+            _initializerCompletionSource = new TaskCompletionSource<bool>();
+            Task.Factory.StartNew(() =>
+                {
+                    Robustness.Instance.SafeCall(async () => { await RunTaskWhenLockAcquired(token); }, _logger);
+                }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            return _initializerCompletionSource.Task;
         }
 
         private async Task RunTaskWhenLockAcquired(CancellationToken token)
@@ -83,15 +100,32 @@ namespace BusLib.ProcessLocks
                 }
             }
         }
-        
+
+        private bool _isInitialized = false;
+
+        internal virtual void InitializationComplete()
+        {
+            var cts = Interlocked.Exchange(ref _initializerCompletionSource, null);
+            cts?.SetResult(true);
+        }
+
         private async Task<string> TryAcquireLockOrWait(CancellationToken token)
         {
             try
             {
-                var lockId = await AcquireLockAsync(_key, token);
+                var lockId = await AcquireLockAsync(Key, token);
                 if (!string.IsNullOrEmpty(lockId))
                 {
                     return lockId;
+                }
+                else
+                {
+                    if (_secondaryAction != null)
+                    {
+                        var action = Interlocked.Exchange(ref _secondaryAction, null);
+                        action?.Invoke();
+                    }
+                    CheckInitializeMutex();
                 }
 
                 await Task.Delay(AcquireAttemptInterval, token);
@@ -100,6 +134,15 @@ namespace BusLib.ProcessLocks
             catch (OperationCanceledException)
             {
                 return null;
+            }
+
+            void CheckInitializeMutex()
+            {
+                if (!_isInitialized)
+                {
+                    InitializationComplete();
+                    _isInitialized = true;
+                }
             }
         }
 

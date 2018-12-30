@@ -1,73 +1,74 @@
-﻿using BusLib.Core;
-using System;
+﻿using System;
+using System.Collections.Concurrent;
+using BusLib.Core;
+using BusLib.Infrastructure;
 
 namespace BusLib.BatchEngineCore
 {
-    public interface IExecutionContextMessage:IMessage
+    class ProcessExecutionContext: IProcessExecutionContext
     {
-        //Guid CorrelationId { get; }
-        ILogger Logger { get; }
-    }
+        private readonly IProcessDataStorage _storage;
+        readonly ConcurrentDictionary<string,object> _tempData=new ConcurrentDictionary<string, object>();
 
-    public interface IDashboardContextMessage:IExecutionContextMessage
-    {
-        IDashboardService DashboardService { get; }
-    }
+        public ProcessExecutionContext(ILogger logger, IReadWritableProcessState processState, IProcessConfiguration configuration, IProcessDataStorage storage)
+        {
+            Logger = logger;
+            //ProcessState = processState;
+            WritableProcessState = processState;
+            Configuration = configuration;
+            _storage = storage;
+        }
 
-    public interface IProcessExecutionContext: IDashboardContextMessage
-    {
-        //todo: id, processId, correlationId, nodeId, 
+        public IReadWritableProcessState WritableProcessState
+        {
+            get;
+        }
 
-        IProcessState ProcessState { get; }
+        public ILogger Logger { get; }
+        public IDashboardService DashboardService { get; }
+        public IProcessState ProcessState => WritableProcessState;
 
-        ProcessConfiguration Configuration { get; }
+        //private IProcessConfiguration _configuration;
+        public IProcessConfiguration Configuration
+        {
+            get;// { return _configuration ?? (_configuration = GetProcessConfiguration()); }
+        }
+        
+        public bool AddUpdateProcessData<T>(string key, T value)
+        {
+            _storage.AddOrUpdateProcessData(ProcessState.Id, key, value);
+            return true;
+        }
 
-        bool AddUpdateProcessData(string key, object value);
+        public T GetProcessData<T>(string key)
+        {
+            return _storage.GetProcessData<T>(ProcessState.Id, key);
+        }
 
-        T GetProcessData<T>(string key);
+        public object GetProcessData(string key)
+        {
+            return _storage.GetProcessData<object>(ProcessState.Id, key);
+        }
 
-        object GetProcessData(string key);
+        public bool SetTempData(string key, object value)
+        {
+            _tempData.AddOrUpdate(key, value, (s, o) => value);
+            return true;
+        }
 
+        public T GetTempData<T>(string key)
+        {
+            if (_tempData.TryGetValue(key, out object value))
+            {
+                return (T)value;
+            }
 
-        bool SetTempData(string key, object value);
-        T GetTempData<T>(string key);
+            return default;
+        }
 
-        object GetTempData(string key);
-
-        //IFrameworkLogger FrameworkLogger { get; }
-    }
-
-    public interface IProcessState
-    {
-        int Id { get; }
-
-        Guid CorrelationId { get; }
-
-        DateTime UpdatedOn { get; }
-
-        ProcessStatus Status { get; }
-
-        int RetryCount { get; }
-
-        int CompanyId { get; }
-
-        int BranchId { get; }
-
-        int SubTenantId { get; }
-
-        DateTime ProcessingDate { get; }
-
-        int ProcessKey { get; }
-
-        bool IsVolumeGenerated { get; }
-
-        int? ParentId { get; }
-
-        int GroupId { get; } 
-
-        bool IsFinished { get; }
-        bool IsStopped { get; }
-        string Criteria { get; }
-        DateTime? StartTime { get; }
+        public object GetTempData(string key)
+        {
+            return GetTempData<object>(key);
+        }
     }
 }

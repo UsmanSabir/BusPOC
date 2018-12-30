@@ -38,5 +38,29 @@ namespace BusLib.PipelineFilters
                 
             }
         }
+
+        //public override TRes FeatureDecoratorQuery<TRes>(TaskMessage message)
+        //{
+        //    message.Logger.Trace("Entering throttling filter");
+
+        //    try
+        //    {
+        //        _semaphoreSlim.Wait();
+        //        message.OnCompleteActions.Register(() => _semaphoreSlim.Release());
+
+        //        message.Logger.Trace("Leaving throttling filter");
+
+
+        //        return Handler.Query<TRes>(message);
+        //    }
+        //    catch
+        //    {
+        //        throw;
+        //    }
+        //    finally
+        //    {
+
+        //    }
+       // }
     }
 }

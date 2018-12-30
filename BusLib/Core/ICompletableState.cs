@@ -9,5 +9,12 @@ namespace BusLib.Core
     public interface ICompletableState
     {
         bool IsFinished { get; }
+        bool IsStopped { get; }
+    }
+
+    public interface IWritableCompletableState
+    {
+        bool IsFinished { set; }
+        bool IsStopped { set; }
     }
 }

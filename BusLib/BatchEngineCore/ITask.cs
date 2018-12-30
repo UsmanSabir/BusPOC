@@ -1,19 +1,20 @@
-﻿using BusLib.Core;
+﻿using BusLib.BatchEngineCore.Handlers;
+using BusLib.Core;
 
 namespace BusLib.BatchEngineCore
 {
-    public interface ITask
+    internal interface ITask
     {
         int ProcessKey { get; }
 
         ISerializer Serializer { get; }
 
-        void Handle(ITaskContext taskContext, ISerializer serializer);
+        void Handle(TaskContext taskContext, ISerializer serializer);
     }
 
-    public interface ITask<in T, in TU>: ITask where TU: ITaskContext //<T>
+    internal interface ITask<in T, in TU>: ITask where TU: ITaskContext //<T>
     {
-        void Execute(T item, TU context);
+        //void Execute(T item, TU context);
     }
 
 }

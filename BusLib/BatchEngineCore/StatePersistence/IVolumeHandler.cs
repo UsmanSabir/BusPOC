@@ -11,7 +11,7 @@ namespace BusLib.BatchEngineCore.Volume
         //persist volume
         void Handle<T>(IEnumerable<T> volume, IProcessExecutionContext processContext);
 
-        ITaskState GetNextTaskWithTransaction(out ITransaction transaction);
+        IReadWritableTaskState GetNextTaskWithTransaction(out ITransaction transaction);
 
         
     }

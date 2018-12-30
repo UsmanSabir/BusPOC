@@ -4,7 +4,7 @@ namespace BusLib.BatchEngineCore.PubSub
 {
     public interface IProcessSubmittedContext
     {
-        int Id { get; }
+        long Id { get; }
         int ProcessKey { get; }
         bool IsResubmission { get; }
         string SubmittedBy { get; }
@@ -44,7 +44,7 @@ namespace BusLib.BatchEngineCore.PubSub
 
     public interface IProcessRetryContext
     {
-        int Id { get; }
+        long Id { get; }
         int ProcessKey { get; }
         ILogger Logger { get; }
 
@@ -54,14 +54,14 @@ namespace BusLib.BatchEngineCore.PubSub
 
     class ProcessRetryContext: IProcessRetryContext
     {
-        public ProcessRetryContext(int id, int processKey, ILogger logger)
+        public ProcessRetryContext(long id, int processKey, ILogger logger)
         {
             Id = id;
             ProcessKey = processKey;
             Logger = logger;
         }
 
-        public int Id { get; }
+        public long Id { get; }
         public int ProcessKey { get; }
         public ILogger Logger { get; }
 
@@ -74,8 +74,12 @@ namespace BusLib.BatchEngineCore.PubSub
 
     internal class ProcessSubmittedContext: IProcessSubmittedContext
     {
-        public ProcessSubmittedContext(int id, int processKey, bool isResubmission, string submittedBy, ILogger logger)
+        public ProcessExecutionCriteria Criteria { get; }
+
+        public ProcessSubmittedContext(long id, int processKey, bool isResubmission, string submittedBy,
+            ProcessExecutionCriteria criteria, ILogger logger)
         {
+            Criteria = criteria;
             Id = id;
             ProcessKey = processKey;
             IsResubmission = isResubmission;
@@ -83,7 +87,9 @@ namespace BusLib.BatchEngineCore.PubSub
             Logger = logger;
         }
 
-        public int Id { get; }
+
+
+        public long Id { get; }
         public int ProcessKey { get; }
         public bool IsResubmission { get; }
         public string SubmittedBy { get; }

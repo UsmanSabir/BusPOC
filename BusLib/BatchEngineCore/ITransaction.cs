@@ -7,13 +7,15 @@ namespace BusLib.BatchEngineCore
         void Commit();
 
         void Rollback();
+
+        object TransactionObject { get; }
     }
 
-    class TransactionWrapper:ITransaction
+    class SafeTransactionWrapper:ITransaction
     {
         private ITransaction _transaction;
 
-        public TransactionWrapper(ITransaction transaction)
+        public SafeTransactionWrapper(ITransaction transaction)
         {
             _transaction = transaction;
         }
@@ -34,6 +36,18 @@ namespace BusLib.BatchEngineCore
             {
                 _transaction?.Rollback();
                 _transaction = null;
+            }
+        }
+
+        public object TransactionObject
+        {
+            get
+            {
+                lock (this)
+                {
+                    var transactionObject = _transaction.TransactionObject;
+                    return transactionObject;
+                }
             }
         }
 

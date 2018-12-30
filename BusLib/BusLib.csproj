@@ -9,9 +9,10 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>BusLib</RootNamespace>
     <AssemblyName>BusLib</AssemblyName>
-    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,6 +23,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -30,11 +32,15 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Caching" />
+    <Reference Include="System.ValueTuple, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.3.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -51,8 +57,12 @@
     <Compile Include="BatchEngineCore\Groups\GroupHandlerPipeline.cs" />
     <Compile Include="BatchEngineCore\Groups\GroupMessage.cs" />
     <Compile Include="BatchEngineCore\Groups\IGroupContext.cs" />
+    <Compile Include="BatchEngineCore\ProcessExecutionCriteria.cs" />
+    <Compile Include="BatchEngineCore\Process\IProcessRepository.cs" />
+    <Compile Include="BatchEngineCore\PubSub\DashboardService.cs" />
+    <Compile Include="BatchEngineCore\PubSub\HealthMessage.cs" />
+    <Compile Include="BatchEngineCore\PubSub\IDistributedPubSub.cs" />
     <Compile Include="BatchEngineCore\PubSub\IGroupSubscriber.cs" />
-    <Compile Include="BatchEngineCore\Handlers\ApplicationTasksHandlers.cs" />
     <Compile Include="BatchEngineCore\Handlers\ItemHandlerAdapter.cs" />
     <Compile Include="BatchEngineCore\Handlers\TaskContext.cs" />
     <Compile Include="BatchEngineCore\Handlers\TaskExecutor.cs" />
@@ -65,21 +75,56 @@
     <Compile Include="BatchEngineCore\NodeSettings.cs" />
     <Compile Include="BatchEngineCore\PubSub\IBroadcastMessage.cs" />
     <Compile Include="BatchEngineCore\PubSub\IProcessSubscriber.cs" />
+    <Compile Include="BatchEngineCore\PubSub\IPubSubFactory.cs" />
     <Compile Include="BatchEngineCore\PubSub\ProcessContext.cs" />
+    <Compile Include="BatchEngineCore\StatePersistence\BusStateManager.cs" />
+    <Compile Include="BatchEngineCore\StatePersistence\CacheBusWrapper.cs" />
+    <Compile Include="BatchEngineCore\StatePersistence\CacheStoragePipeline.cs" />
+    <Compile Include="BatchEngineCore\StatePersistence\ActionCommandHandler.cs" />
+    <Compile Include="BatchEngineCore\StatePersistence\DatabasePipeline.cs" />
+    <Compile Include="BatchEngineCore\StatePersistence\DbActionCommandHandler.cs" />
+    <Compile Include="BatchEngineCore\StatePersistence\DbCircuitBreakerFeatureHandler.cs" />
+    <Compile Include="BatchEngineCore\StatePersistence\DbCommandWrapper.cs" />
     <Compile Include="BatchEngineCore\StatePersistence\KeyConstants.cs" />
+    <Compile Include="BatchEngineCore\StatePersistence\StatePersistencePipeline.cs" />
     <Compile Include="BatchEngineCore\TaskProducerWorker.cs" />
-    <Compile Include="BatchEngineCore\Volume\VolumeRequestMessage.cs" />
+    <Compile Include="BatchEngineCore\Volume\IEntityFactory.cs" />
+    <Compile Include="BatchEngineCore\Volume\ProcessExecutionContext.cs" />
     <Compile Include="BatchEngineCore\WatchDog\ProcessWatchDog.cs" />
+    <Compile Include="BatchEngineCore\WatchDog\PubSubWatchDog.cs" />
+    <Compile Include="BatchEngineService.cs" />
+    <Compile Include="Core\Events\EventMessages.cs" />
     <Compile Include="Core\Events\IEventAggregator.cs" />
+    <Compile Include="Core\Events\TinyMessenger.cs" />
     <Compile Include="Core\IErrorNotification.cs" />
+    <Compile Include="Core\ReliablePipeline.cs" />
     <Compile Include="Core\RepeatingProcess.cs" />
+    <Compile Include="Core\RepeatingTriggeringProcess.cs" />
     <Compile Include="Core\WorkerProcess.cs" />
+    <Compile Include="Helper\CB\CircuitBreaker.cs" />
+    <Compile Include="Helper\CB\CircuitBreakerOpenException.cs" />
+    <Compile Include="Helper\CB\CircuitBreakerStateEnum.cs" />
+    <Compile Include="Helper\CB\CircuitBreakerStateStore.cs" />
+    <Compile Include="Helper\CB\CircuitBreakerStateStoreFactory.cs" />
+    <Compile Include="Helper\CB\ICircuitBreakerStateStore.cs" />
     <Compile Include="Helper\SafeDisposable.cs" />
     <Compile Include="Helper\SafeDisposableActions.cs" />
     <Compile Include="Helper\Extensions.cs" />
     <Compile Include="Helper\ICacheAside.cs" />
     <Compile Include="Helper\Robustness.cs" />
+    <Compile Include="Helper\SystemHealth\DiskInfoHealthProvider.cs" />
+    <Compile Include="Helper\SystemHealth\MemoryHealthProvider.cs" />
+    <Compile Include="Helper\SystemHealth\Models\DiskPerformanceInfo.cs" />
+    <Compile Include="Helper\SystemHealth\Models\DiskSystemInfo.cs" />
+    <Compile Include="Helper\SystemHealth\Models\Enums.cs" />
+    <Compile Include="Helper\SystemHealth\Models\ProcessorPerformanceInfo.cs" />
+    <Compile Include="Helper\SystemHealth\Models\ProcessorSystemInfo.cs" />
+    <Compile Include="Helper\SystemHealth\OSInfoProvider.cs" />
+    <Compile Include="Helper\SystemHealth\ProcessorHealthProvider.cs" />
     <Compile Include="Helper\TransientFaultHandling.cs" />
+    <Compile Include="Helper\WeakAction.cs" />
+    <Compile Include="Infrastructure\IProcessDataStorage.cs" />
+    <Compile Include="PipelineFilters\CircuitBreakerFeatureHandler.cs" />
     <Compile Include="PipelineFilters\ConsumerFilter.cs" />
     <Compile Include="PipelineFilters\DuplicateCheckFilter.cs" />
     <Compile Include="PipelineFilters\RetryFeatureHandler.cs" />
@@ -99,13 +144,13 @@
     <Compile Include="BatchEngineCore\StatePersistence\Adapters\ISingleTypeVolumeAdapter.cs" />
     <Compile Include="BatchEngineCore\StatePersistence\Adapters\ITypeConverterVolumeAdapter.cs" />
     <Compile Include="BatchEngineCore\StatePersistence\Adapters\IVolumeAdapter.cs" />
-    <Compile Include="BatchEngineCore\Volume\ProcessExecutionContext.cs" />
+    <Compile Include="BatchEngineCore\Volume\ProcessExecutionContracts.cs" />
     <Compile Include="BatchEngineCore\ProcessStatus.cs" />
     <Compile Include="BatchEngineCore\ResultStatus.cs" />
     <Compile Include="BatchEngineCore\Saga\BaseSagaTask.cs" />
     <Compile Include="BatchEngineCore\ITask.cs" />
     <Compile Include="BatchEngineCore\ITaskUnit.cs" />
-    <Compile Include="BatchEngineCore\TaskCompletionStatus.cs" />
+    <Compile Include="BatchEngineCore\CompletionStatus.cs" />
     <Compile Include="BatchEngineCore\StatePersistence\IVolumeHandler.cs" />
     <Compile Include="BatchEngineCore\StatePersistence\VolumePipeline.cs" />
     <Compile Include="Core\ICompletableState.cs" />
@@ -124,7 +169,7 @@
     <Compile Include="Helper\FastExpressionCompiler.cs" />
     <Compile Include="Helper\Throttler.cs" />
     <Compile Include="Infrastructure\AppServerQuery.cs" />
-    <Compile Include="Infrastructure\DbCommand.cs" />
+    <Compile Include="Infrastructure\ActionCommand.cs" />
     <Compile Include="Infrastructure\DbQuery.cs" />
     <Compile Include="Messages\ActionMessage.cs" />
     <Compile Include="Bus.cs" />
@@ -138,6 +183,7 @@
     <Compile Include="Messages\IQuery.cs" />
     <Compile Include="Messages\ISystemCommand.cs" />
     <Compile Include="Messages\SystemFeatureToggleCommand.cs" />
+    <Compile Include="ProcessLocks\IdistributedMutexFactory.cs" />
     <Compile Include="ProcessLocks\MachineLockFactory.cs" />
     <Compile Include="ProcessLocks\SystemLock.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -146,6 +192,9 @@
     <Compile Include="Serializers\PrimitiveTypeSerializers.cs" />
     <Compile Include="Serializers\SerializersFactory.cs" />
     <Compile Include="Utils.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

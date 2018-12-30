@@ -2,7 +2,12 @@
 
 namespace BusLib.Core
 {
-    public interface IHandler<in T>: IDisposable where T : IMessage
+    //public interface IQueryCommandHandler<T> : IHandler<T> where T : IMessage
+    //{
+    //    TResult Query<TResult>(T message);
+    //}
+
+    public interface IHandler<in T> : IDisposable where T : IMessage
     {
         void Handle(T message);
     }

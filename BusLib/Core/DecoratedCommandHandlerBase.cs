@@ -14,6 +14,7 @@ namespace BusLib.Core
             //Handler = handler;
 
             action = (command) => FeatureDecoratorHandler(command);
+            //_queryAction = (cmd) => FeatureDecoratorQuery(cmd);
             IsEnabled = true;
         }
 
@@ -26,6 +27,7 @@ namespace BusLib.Core
         public bool IsEnabled { get; private set; }
 
         Action<T> action;
+        //private Func<T, TU> _queryAction;
 
         public void Handle(T message)
         {
@@ -44,7 +46,15 @@ namespace BusLib.Core
 #endif
         }
 
+        //public TResult Query<TResult>(T message)
+        //{
+        //    return FeatureDecoratorQuery<TResult>(message);
+        //}
+
+        
         public abstract void FeatureDecoratorHandler(T message);
+
+        //public abstract TRes FeatureDecoratorQuery<TRes>(T message);
 #if LOCK
 
         object _lock = new object();
@@ -62,6 +72,9 @@ namespace BusLib.Core
 #endif
             {
                 action = (message) => FeatureDecoratorHandler(message);
+
+                //_queryAction = (cmd) => FeatureDecoratorQuery(cmd);
+
                 IsEnabled = true;
             }
 #if RWLOCK
@@ -80,6 +93,8 @@ namespace BusLib.Core
 #endif
             {
                 action = (message) => Handler?.Handle(message);
+                //_queryAction = (cmd) => Handler.Query(cmd);
+
                 IsEnabled = false;
             }
 #if RWLOCK

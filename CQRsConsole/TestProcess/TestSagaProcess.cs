@@ -1,15 +1,15 @@
-﻿using System.Collections.Generic;
-using BusLib.BatchEngineCore;
+﻿//using System.Collections.Generic;
+//using BusLib.BatchEngineCore;
 
-namespace CQRsConsole.TestProcess
-{
-    public class TestSagaProcess : BaseProcess<TestDataContext, TestSagaTask>
-    {
-        public override IEnumerable<TestDataContext> GetVolume(IProcessExecutionContext processContext)
-        {
-            throw new System.NotImplementedException();
-        }
+//namespace CQRsConsole.TestProcess
+//{
+//    public class TestSagaProcess : BaseProcess<TestDataContext, TestSagaTask>
+//    {
+//        public override IEnumerable<TestDataContext> GetVolume(IProcessExecutionContext processContext)
+//        {
+//            throw new System.NotImplementedException();
+//        }
 
-        public override int ProcessKey { get; } = 1;
-    }
-}
+//        public override int ProcessKey { get; } = 1;
+//    }
+//}

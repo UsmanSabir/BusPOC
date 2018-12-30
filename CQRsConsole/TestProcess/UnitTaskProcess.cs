@@ -12,9 +12,9 @@ namespace CQRsConsole.TestProcess
 
         public override int ProcessKey { get; } = 1;
 
-        public override void Execute(int item, ITaskContext context)
-        {
+        //public override void Execute(int item, ITaskContext context)
+        //{
             
-        }
+        //}
     }
 }

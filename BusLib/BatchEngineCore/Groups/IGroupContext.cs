@@ -7,7 +7,7 @@ namespace BusLib.BatchEngineCore.Groups
 {
     public interface IGroupStartContext
     {
-        int Id { get; }
+        long Id { get; }
         int GroupKey { get; }
         bool IsResubmission { get; }
         void StopGroup(string reason);
@@ -49,11 +49,13 @@ namespace BusLib.BatchEngineCore.Groups
 
     public class GroupStartContext : IGroupStartContext
     {
-        private readonly IGroupEntity _groupEntity;
+        private readonly IReadWritableGroupEntity _groupEntity;
+        public List<ProcessExecutionCriteria> MessageCriteria { get; }
 
-        public GroupStartContext(IGroupEntity @group, ILogger logger)
+        public GroupStartContext(IReadWritableGroupEntity @group, ILogger logger, List<ProcessExecutionCriteria> messageCriteria)
         {
             _groupEntity = @group;
+            MessageCriteria = messageCriteria;
             Logger = logger;
 
             Id = group.Id;
@@ -62,7 +64,7 @@ namespace BusLib.BatchEngineCore.Groups
             SubmittedBy = group.SubmittedBy;
         }
 
-        public int Id { get; }
+        public long Id { get; }
         public int GroupKey { get; }
 
         public bool IsResubmission { get; }
@@ -81,22 +83,47 @@ namespace BusLib.BatchEngineCore.Groups
                 Logger.Info($"{CurrentSubscriber.GetType()} requested group stop");
             }
 
-            var stopGroupMessage = new GroupMessage(GroupActions.Stop, _groupEntity, reason);
-            Bus.Instance.HandleGroupMessage(stopGroupMessage);
+            var stopGroupMessage = new GroupMessage(GroupActions.Stop, _groupEntity, null, reason);
+            Bus.Instance.HandleWatchDogMessage(stopGroupMessage);
         }
 
     }
 
     public interface IGroupEntity: ICompletableState
     {
-        int Id { get; }
+        long Id { get; }
         int GroupKey { get; }
         bool IsManual { get; }
         bool IsResubmission { get; }
         string SubmittedBy { get; }
         string Criteria { get; }
-
+        string State { get; }
     }
+
+    public interface IWritableGroupEntity : IWritableCompletableState
+    {
+        long Id { set; }
+        int GroupKey { set; }
+        bool IsManual { set; }
+        bool IsResubmission { set; }
+        string SubmittedBy { set; }
+        string Criteria { set; }
+        string State { set; }
+    }
+
+    public interface IReadWritableGroupEntity : IGroupEntity,IWritableGroupEntity
+    {
+        new long Id { get; set; }
+        new int GroupKey { get; set; }
+        new bool IsManual { get; set; }
+        new bool IsResubmission { get; set; }
+        new string SubmittedBy { get; set; }
+        new string Criteria { get; set; }
+        new string State { get; set; }
+        new bool IsFinished { get; set; }
+        new bool IsStopped { get; set; }
+    }
+
 
     public interface IProcessEntity : ICompletableState
     {
@@ -114,24 +141,46 @@ namespace BusLib.BatchEngineCore.Groups
 
     class SubmittedGroup
     {
-        public SubmittedGroup(IGroupEntity groupEntity, List<IProcessState> processEntities)
+        object _syncLock=new object();
+
+        public SubmittedGroup(IReadWritableGroupEntity groupEntity, List<IReadWritableProcessState> processEntities)
         {
             GroupEntity = groupEntity;
             ProcessEntities = processEntities;
         }
 
-        public IGroupEntity GroupEntity { get; }
+        public IReadWritableGroupEntity GroupEntity { get; private set; }
 
-        public List<IProcessState> ProcessEntities { get; }
+        public List<IReadWritableProcessState> ProcessEntities { get; private set; }
 
-        public IEnumerable<IProcessState> GetNextProcesses(int? parentProcessId)
+        public IEnumerable<IReadWritableProcessState> GetNextProcesses(long? parentProcessId)
         {
-            List<IProcessState> groupProcesses = ProcessEntities;
+            lock (_syncLock)
+            {
+                List<IReadWritableProcessState> groupProcesses = ProcessEntities;
 
-            var nextProcess = groupProcesses.Where(p => p.ParentId == parentProcessId);
-            return nextProcess;
+                var nextProcess = groupProcesses.Where(p => p.ParentId == parentProcessId);
+                return nextProcess;
+            }
         }
 
+        public void UpdateProcessInstance(IReadWritableProcessState processState)
+        {
+            lock (_syncLock)
+            {
+                ProcessEntities.Remove(ProcessEntities.First(p => p.Id == processState.Id));
+                ProcessEntities.Add(processState);
+            }
+        }
+
+        public void Refresh(IStateManager stateManager)
+        {
+            lock (_syncLock)
+            {
+                GroupEntity = stateManager.GetGroupEntity(GroupEntity.Id);
+                ProcessEntities = stateManager.GetSubmittedGroupProcesses(GroupEntity.Id).ToList();
+            }
+        }
     }
 
 }

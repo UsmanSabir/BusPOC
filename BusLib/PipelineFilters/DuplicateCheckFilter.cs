@@ -8,15 +8,15 @@ using BusLib.Helper;
 
 namespace BusLib.PipelineFilters
 {
-    public class DuplicateCheckFilter<T, U> : FeatureCommandHandlerBase<T> where U : IComparable where T : IMessage
+    public class DuplicateCheckFilter<T, TU> : FeatureCommandHandlerBase<T> where TU : IComparable where T : IMessage
     {
-        readonly List<U> _processedIds = new List<U>();
-        private readonly Func<T, U> _idExtractorFunc;
+        readonly List<TU> _processedIds = new List<TU>();
+        private readonly Func<T, TU> _idExtractorFunc;
         private readonly string _name;
         private readonly ILogger _logger;
         readonly ReaderWriterLockSlim _readerWriter = new ReaderWriterLockSlim();
 
-        public DuplicateCheckFilter(Func<T, U> idExtractorFunc, string name, ILogger logger)
+        public DuplicateCheckFilter(Func<T, TU> idExtractorFunc, string name, ILogger logger)
         {
             _idExtractorFunc = idExtractorFunc;
             _name = name;
@@ -24,7 +24,7 @@ namespace BusLib.PipelineFilters
         }
 
 
-        internal void Cleanup(IEnumerable<U> items)
+        internal void Cleanup(IEnumerable<TU> items)
         {
             _readerWriter.EnterWriteLock();
             try
@@ -48,7 +48,7 @@ namespace BusLib.PipelineFilters
 
         public override void FeatureDecoratorHandler(T message)
         {
-            U id;
+            TU id;
             try
             {
                 _readerWriter.EnterReadLock();
@@ -59,7 +59,7 @@ namespace BusLib.PipelineFilters
                 _readerWriter.ExitReadLock();
             }
 
-            var exist = _processedIds.Any(r => EqualityComparer<U>.Default.Equals(id, r));
+            var exist = _processedIds.Any(r => EqualityComparer<TU>.Default.Equals(id, r));
             if (exist)
             {
                 _logger.Warn($"{_name} filter found duplicate entry for id {id}. Discarding");

@@ -10,7 +10,7 @@ namespace CQRsConsole
     {
         static void Main(string[] args)
         {
-            TestProcess.TestSagaTask p = new TestProcess.TestSagaTask();
+            //TestProcess.TestSagaTask p = new TestProcess.TestSagaTask();
 
             // The code provided will print ‘Hello World’ to the console.
             // Press Ctrl+F5 (or go to Debug > Start Without Debugging) to run your app.

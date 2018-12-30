@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DynamicDecoratprsConsoleApp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BusLib", "BusLib\BusLib.csproj", "{10D4B0C0-F122-432B-9D79-9BBE637D6CDE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BusImpl", "..\BusImpl\BusImpl.csproj", "{FD7DA289-9446-4B0D-AAF5-76F42D6F5F58}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,8 +29,15 @@ Global
 		{10D4B0C0-F122-432B-9D79-9BBE637D6CDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{10D4B0C0-F122-432B-9D79-9BBE637D6CDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{10D4B0C0-F122-432B-9D79-9BBE637D6CDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD7DA289-9446-4B0D-AAF5-76F42D6F5F58}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD7DA289-9446-4B0D-AAF5-76F42D6F5F58}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD7DA289-9446-4B0D-AAF5-76F42D6F5F58}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD7DA289-9446-4B0D-AAF5-76F42D6F5F58}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B6C15CF5-801A-4232-A2C3-B186F3297325}
 	EndGlobalSection
 EndGlobal

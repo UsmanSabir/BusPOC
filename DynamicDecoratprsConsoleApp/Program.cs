@@ -19,10 +19,10 @@ namespace DynamicDecoratprsConsoleApp
             Console.WriteLine("Hello World!");
 
             var sw = Stopwatch.StartNew();
-            Parallel.For(1, 800, i =>
-             {
-                 BusLib.Bus.Instance.TestDecorator(new ActionCommand(HelloCommand));
-             });
+            //Parallel.For(1, 800, i =>
+            // {
+            //     BusLib.Bus.Instance.TestDecorator(new ActionCommand(HelloCommand));
+            // });
             sw.Stop();
 
             SystemFeatureToggleCommand toggleCommand = new SystemFeatureToggleCommand(nameof(ICommand), typeof(PerfMonitorHandler<ICommand>), false);
