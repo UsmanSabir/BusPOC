@@ -9,11 +9,13 @@ namespace BusLib.BatchEngineCore.PubSub
         
     }
 
+
     internal interface IProcessGroupRemovedMessage : IBroadcastMessage
     {
         SubmittedGroup Group { get; }
     }
 
+    
     public interface IWatchDogMessage : IBroadcastMessage
     {
 
@@ -92,5 +94,13 @@ namespace BusLib.BatchEngineCore.PubSub
 
         public string ProcessId { get; set; }
     }
+
+    internal class ProcessGroupAddedMessage : IBroadcastMessage
+    {
+        public long GroupId { get; set; }
+        [XmlIgnore]
+        public object Sender { get; }
+    }
+
 
 }

@@ -50,11 +50,13 @@ namespace BusLib.BatchEngineCore.Groups
     public class GroupStartContext : IGroupStartContext
     {
         private readonly IReadWritableGroupEntity _groupEntity;
-        public List<ProcessExecutionCriteria> MessageCriteria { get; }
+        private Bus _bus;
+        public List<JobCriteria> MessageCriteria { get; }
 
-        public GroupStartContext(IReadWritableGroupEntity @group, ILogger logger, List<ProcessExecutionCriteria> messageCriteria)
+        public GroupStartContext(IReadWritableGroupEntity @group, ILogger logger, List<JobCriteria> messageCriteria, Bus bus)
         {
             _groupEntity = @group;
+            _bus = bus;
             MessageCriteria = messageCriteria;
             Logger = logger;
 
@@ -64,6 +66,8 @@ namespace BusLib.BatchEngineCore.Groups
             SubmittedBy = group.SubmittedBy;
         }
 
+        
+        
         public long Id { get; }
         public int GroupKey { get; }
 
@@ -84,7 +88,7 @@ namespace BusLib.BatchEngineCore.Groups
             }
 
             var stopGroupMessage = new GroupMessage(GroupActions.Stop, _groupEntity, null, reason);
-            Bus.Instance.HandleWatchDogMessage(stopGroupMessage);
+            _bus.HandleWatchDogMessage(stopGroupMessage);
         }
 
     }
@@ -98,6 +102,9 @@ namespace BusLib.BatchEngineCore.Groups
         string SubmittedBy { get; }
         string Criteria { get; }
         string State { get; }
+        bool IsGenerated { get; }
+        string Payload { get; }
+
     }
 
     public interface IWritableGroupEntity : IWritableCompletableState
@@ -109,6 +116,10 @@ namespace BusLib.BatchEngineCore.Groups
         string SubmittedBy { set; }
         string Criteria { set; }
         string State { set; }
+
+        bool IsGenerated { set; }
+        string Payload { set; }
+
     }
 
     public interface IReadWritableGroupEntity : IGroupEntity,IWritableGroupEntity
@@ -122,6 +133,10 @@ namespace BusLib.BatchEngineCore.Groups
         new string State { get; set; }
         new bool IsFinished { get; set; }
         new bool IsStopped { get; set; }
+
+        new bool IsGenerated { get; set; }
+        new string Payload { get; set; }
+
     }
 
 

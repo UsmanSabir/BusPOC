@@ -74,10 +74,10 @@ namespace BusLib.BatchEngineCore.PubSub
 
     internal class ProcessSubmittedContext: IProcessSubmittedContext
     {
-        public ProcessExecutionCriteria Criteria { get; }
+        public JobCriteria Criteria { get; }
 
         public ProcessSubmittedContext(long id, int processKey, bool isResubmission, string submittedBy,
-            ProcessExecutionCriteria criteria, ILogger logger)
+            JobCriteria criteria, ILogger logger)
         {
             Criteria = criteria;
             Id = id;

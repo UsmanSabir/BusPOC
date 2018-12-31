@@ -21,7 +21,8 @@ namespace BusLib.BatchEngineCore
         IProcessState ProcessState { get; }
 
         IProcessConfiguration Configuration { get; }
-
+        DateTime ProcessingDate { get; }
+        JobCriteria Criteria { get; }
         bool AddUpdateProcessData<T>(string key, T value);
 
         T GetProcessData<T>(string key);

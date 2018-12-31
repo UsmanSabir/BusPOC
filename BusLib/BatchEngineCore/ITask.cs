@@ -9,7 +9,7 @@ namespace BusLib.BatchEngineCore
 
         ISerializer Serializer { get; }
 
-        void Handle(TaskContext taskContext, ISerializer serializer);
+        void Handle(TaskContext taskContext, ISerializer serializer, IStateManager stateManager);
     }
 
     internal interface ITask<in T, in TU>: ITask where TU: ITaskContext //<T>

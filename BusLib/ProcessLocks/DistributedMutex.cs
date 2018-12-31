@@ -11,8 +11,8 @@ namespace BusLib.ProcessLocks
 {
     public abstract class DistributedMutex
     {
-        protected internal const int RenewIntervalSecs = 5; //45;
-        protected internal const int AcquireAttemptIntervalSecs = 7;// 65;
+        protected internal const int RenewIntervalSecs = 45;
+        protected internal const int AcquireAttemptIntervalSecs = 65;
 
         private static readonly TimeSpan RenewInterval = TimeSpan.FromSeconds(RenewIntervalSecs);
         private static readonly TimeSpan AcquireAttemptInterval = TimeSpan.FromSeconds(AcquireAttemptIntervalSecs);
@@ -22,12 +22,12 @@ namespace BusLib.ProcessLocks
         private readonly IFrameworkLogger _logger;
         private TaskCompletionSource<bool> _initializerCompletionSource;
 
-        protected DistributedMutex(string key, Func<CancellationToken, Task> taskToRunWhenLockAcquired, Action secondaryAction)
+        protected DistributedMutex(string key, Func<CancellationToken, Task> taskToRunWhenLockAcquired, Action secondaryAction, IFrameworkLogger logger)
         {
             Key = key;
             _taskToRunWhenLockAcquired = taskToRunWhenLockAcquired;
             _secondaryAction = secondaryAction;
-            _logger = LoggerFactory.GetSystemLogger();
+            _logger = logger;
         }
 
         public Task RunTaskWhenMutexAcquired(CancellationToken token)

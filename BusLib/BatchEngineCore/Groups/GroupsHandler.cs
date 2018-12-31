@@ -16,16 +16,27 @@ namespace BusLib.BatchEngineCore.Groups
         private readonly IStateManager _stateManager;
         private readonly ISerializersFactory _serializersFactory;
         private readonly IEntityFactory _entityFactory;
+        private readonly IResolver _resolver;
+        private readonly IBatchLoggerFactory _loggerFactory;
 
-        public GroupsHandler(ILogger logger, IBatchEngineSubscribers batchEngineSubscribers, IStateManager stateManager, ISerializersFactory serializersFactory, IEntityFactory entityFactory)
+        public GroupsHandler(ILogger logger, IBatchEngineSubscribers batchEngineSubscribers, IStateManager stateManager, 
+            ISerializersFactory serializersFactory, IEntityFactory entityFactory, IResolver resolver, IBatchLoggerFactory loggerFactory)
         {
             _logger = logger;
             _batchEngineSubscribers = batchEngineSubscribers;
             _stateManager = stateManager;
             _serializersFactory = serializersFactory;
             _entityFactory = entityFactory;
+            _resolver = resolver;
+            _loggerFactory = loggerFactory;
         }
 
+        private Bus _bus;
+        private Bus Bus
+        {
+            get { return _bus ?? (_bus = _resolver.Resolve<Bus>()); }
+        }
+        
         //public void Handle(GroupMessage message)
         //{
         //    if (GroupActions.Start.Id ==message.Action.Id)
@@ -38,7 +49,7 @@ namespace BusLib.BatchEngineCore.Groups
         //        {
         //            CreateGroup(message.Group, message.Criteria);
         //        }
-                
+
         //    }
         //    else if(GroupActions.Stop.Id == message.Action.Id)
         //    {
@@ -54,6 +65,11 @@ namespace BusLib.BatchEngineCore.Groups
 
                 if (!message.IsProcessSubmission)
                 {
+                    if (message.Group.GroupKey == 0)
+                    {
+                        _logger.Error("Group {groupId} submitted with no group key", message.GroupId);
+                        return null;
+                    }
                     groupProcesses = GetGroupProcesses(message.Group.GroupKey);
 
 
@@ -84,9 +100,9 @@ namespace BusLib.BatchEngineCore.Groups
         }
 
         internal SubmittedGroup CreateProcesses(IReadWritableGroupEntity @group, List<int> processKeys,
-            List<ProcessExecutionCriteria> messageCriteria)
+            List<JobCriteria> messageCriteria)
         {
-            var groupLogger = LoggerFactory.GetGroupLogger(group.Id, group.GroupKey);
+            var groupLogger = _loggerFactory.GetGroupLogger(group.Id, group.GroupKey);
             groupLogger.Trace("Starting group");
 
 
@@ -97,9 +113,9 @@ namespace BusLib.BatchEngineCore.Groups
                 return null;
             }
 
-            var serializer = _serializersFactory.GetSerializer<ProcessExecutionCriteria>();
+            var serializer = _serializersFactory.GetSerializer<JobCriteria>();
 
-            GroupStartContext context = new GroupStartContext(group, groupLogger, messageCriteria);
+            GroupStartContext context = new GroupStartContext(group, groupLogger, messageCriteria, Bus);
 
             var groupSubscribers = _batchEngineSubscribers.GetGroupSubscribers().ToList();
 
@@ -122,7 +138,7 @@ namespace BusLib.BatchEngineCore.Groups
             }
 
             //todo get group processes and add to queue
-            List<(ProcessExecutionCriteria Criteria, IReadWritableProcessState ProcessState)> process2Submit = new List<(ProcessExecutionCriteria Criteria, IReadWritableProcessState ProcessState)>(); // List<IReadWritableProcessState>();
+            List<(JobCriteria Criteria, IReadWritableProcessState ProcessState)> process2Submit = new List<(JobCriteria Criteria, IReadWritableProcessState ProcessState)>(); // List<IReadWritableProcessState>();
 
             List<IReadWritableProcessState> processList = new List<IReadWritableProcessState>();
 
@@ -203,7 +219,7 @@ namespace BusLib.BatchEngineCore.Groups
 
             //nextProcesses.ForEach(p =>
             //{
-            //    var volumeMessage = new ProcessExecutionContext(LoggerFactory.GetProcessLogger(p.Id, p.ProcessKey), p);
+            //    var volumeMessage = new ProcessExecutionContext(BatchLoggerFactory.GetProcessLogger(p.Id, p.ProcessKey), p);
             //    Bus.Instance.HandleVolumeRequest(volumeMessage);
             //});
 
@@ -219,11 +235,11 @@ namespace BusLib.BatchEngineCore.Groups
 
         #region GroupSubmit(Commented)
 
-        //internal SubmittedGroup CreateGroup(IGroupEntity @group, List<ProcessExecutionCriteria> messageCriteria)
+        //internal SubmittedGroup CreateGroup(IGroupEntity @group, List<JobCriteria> messageCriteria)
         //{
-        //    var groupLogger = LoggerFactory.GetGroupLogger(group.Id, group.GroupKey);
+        //    var groupLogger = BatchLoggerFactory.GetGroupLogger(group.Id, group.GroupKey);
         //    groupLogger.Trace("Starting group");
-        //    var serializer = _serializersFactory.GetSerializer<ProcessExecutionCriteria>();
+        //    var serializer = _serializersFactory.GetSerializer<JobCriteria>();
 
         //    GroupStartContext context = new GroupStartContext(group, groupLogger, messageCriteria);
 
@@ -248,7 +264,7 @@ namespace BusLib.BatchEngineCore.Groups
         //    }
 
         //    //todo get group processes and add to queue
-        //    List<(ProcessExecutionCriteria Criteria, IReadWritableProcessState ProcessState)> process2submit = new List<(ProcessExecutionCriteria Criteria, IReadWritableProcessState ProcessState)>(); // List<IReadWritableProcessState>();
+        //    List<(JobCriteria Criteria, IReadWritableProcessState ProcessState)> process2submit = new List<(JobCriteria Criteria, IReadWritableProcessState ProcessState)>(); // List<IReadWritableProcessState>();
         //    //List<IProcessState> process2submit=new List<IProcessState>();
         //    var groupProcesses = GetGroupProcesses(@group.GroupKey);
 
@@ -309,7 +325,7 @@ namespace BusLib.BatchEngineCore.Groups
 
         //    //nextProcesses.ForEach(p =>
         //    //{
-        //    //    var volumeMessage = new ProcessExecutionContext(LoggerFactory.GetProcessLogger(p.Id, p.ProcessKey), p);
+        //    //    var volumeMessage = new ProcessExecutionContext(BatchLoggerFactory.GetProcessLogger(p.Id, p.ProcessKey), p);
         //    //    Bus.Instance.HandleVolumeRequest(volumeMessage);
         //    //});
 
@@ -319,7 +335,7 @@ namespace BusLib.BatchEngineCore.Groups
 
         #endregion
 
-        private void SubmitProcesses(List<(ProcessExecutionCriteria Criteria, IReadWritableProcessState ProcessState)> groupProcesses, IGroupEntity groupEntity)
+        private void SubmitProcesses(List<(JobCriteria Criteria, IReadWritableProcessState ProcessState)> groupProcesses, IGroupEntity groupEntity)
         {
             //groupProcesses.ForEach(p =>
             //{
@@ -329,7 +345,7 @@ namespace BusLib.BatchEngineCore.Groups
 
 
             var processStates = groupProcesses.Select(s=>s.ProcessState).ToList();
-            _stateManager.AddGroupProcess(processStates);
+            _stateManager.AddGroupProcess(processStates, groupEntity);
 
             //todo
             //using (var trans = _stateManager.BeginTransaction())
@@ -352,7 +368,7 @@ namespace BusLib.BatchEngineCore.Groups
                     var processSubscribers = subscribers.Where(s=>s.ProcessKey== processState.ProcessKey).ToList();
                     if (processSubscribers.Count > 0)
                     {
-                        ProcessSubmittedContext pContext = new ProcessSubmittedContext(processState.Id, processState.ProcessKey, groupEntity.IsResubmission, groupEntity.SubmittedBy, p.Criteria, LoggerFactory.GetProcessLogger(processState.Id, processState.ProcessKey));
+                        ProcessSubmittedContext pContext = new ProcessSubmittedContext(processState.Id, processState.ProcessKey, groupEntity.IsResubmission, groupEntity.SubmittedBy, p.Criteria, _loggerFactory.GetProcessLogger(processState.Id, processState.ProcessKey, processState.CorrelationId));
                         foreach (var subscriber in subscribers)
                         {
                             Robustness.Instance.SafeCall(() => subscriber.OnProcessSubmitted(pContext));

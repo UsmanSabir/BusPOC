@@ -1,5 +1,6 @@
 ﻿using System;
 using BusLib.Core;
+using BusLib.Helper;
 using BusLib.Infrastructure;
 
 namespace BusLib.BatchEngineCore.StatePersistence
@@ -7,11 +8,11 @@ namespace BusLib.BatchEngineCore.StatePersistence
     public class DbCommandWrapper
     {
         private readonly ILogger _logger;
-
-        public DbCommandWrapper(ILogger logger)
+        private Bus _bus;
+        public DbCommandWrapper(ILogger logger, IResolver resolver)
         {
             _logger = logger;
-
+            _bus = resolver.Resolve<Bus>();
         }
 
         T Execute<T>(Func<T> func)
@@ -31,11 +32,11 @@ namespace BusLib.BatchEngineCore.StatePersistence
 
             try
             {
-                Bus.Instance.HandleCacheStorageCommand(action);
+                _bus.HandleCacheStorageCommand(action);
             }
             catch (Exception e)
             {
-                _logger.Fetal($"Error executing state command. {e.Message}", e);
+                _logger.Fatal($"Error executing state command. {e.Message}", e);
             }
         }
 

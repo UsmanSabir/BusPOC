@@ -14,7 +14,8 @@ namespace BusLib.BatchEngineCore.Volume
     internal class ProcessVolumePipeline:Pipeline<ProcessExecutionContext>
     {
         public ProcessVolumePipeline(CancellationToken token, ILogger logger, IStateManager stateManager,
-            ICacheAside cacheAside, IProcessRepository processRepository, IVolumeHandler volumeHandler):base(new ProcessVolumeRequestHandler(logger, stateManager, cacheAside, processRepository, volumeHandler, token))
+            ICacheAside cacheAside, IProcessRepository processRepository, IVolumeHandler volumeHandler,
+            IResolver resolver):base(new ProcessVolumeRequestHandler(logger, stateManager, cacheAside, processRepository, volumeHandler, token, resolver))
         {
             RegisterFeatureDecorator(new ConsumerFilter<ProcessExecutionContext>(token, logger, "VolumeGeneratorConsumer"));
         }

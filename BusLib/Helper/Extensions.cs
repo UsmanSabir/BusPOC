@@ -102,10 +102,10 @@ namespace BusLib.Helper
             stateManager.SaveProcess(state);
         }
 
-        public static int RetryProcess(this IReadWritableProcessState state)
+        public static int RetryProcess(this IReadWritableProcessState state, IStateManager steManager)
         {
             //todo: update retrycount, start time and reset error tasks
-            IStateManager steManager = Bus.StateManager;
+            //IStateManager steManager = Resolver.Instance.Resolve<IStateManager>();
             return steManager.MarkProcessForRetry(state);
         }
         
@@ -117,9 +117,9 @@ namespace BusLib.Helper
             //context.Result
         }
 
-        public static void MarkTaskStarted(this TaskContext context)
+        public static void MarkTaskStarted(this TaskContext context, IStateManager steManager)
         {
-            IStateManager steManager = Bus.StateManager;
+            //IStateManager steManager = Bus.StateManager;
 
             IReadWritableTaskState task = context.TaskStateWritable;
             task.StartedOn = DateTime.UtcNow;
@@ -128,10 +128,10 @@ namespace BusLib.Helper
             steManager.UpdateTask(task, context.Transaction);
         }
 
-        public static void MarkTaskStatus(this TaskContext context, CompletionStatus completionStatus, ResultStatus result, string reason)
+        public static void MarkTaskStatus(this TaskContext context, CompletionStatus completionStatus, ResultStatus result, string reason, IStateManager steManager)
         {
             context.Logger.Info(reason);
-            IStateManager steManager = Bus.StateManager;
+            //IStateManager steManager = Bus.StateManager;
 
             //todo: 
             IReadWritableTaskState task = context.TaskStateWritable;
@@ -157,11 +157,11 @@ namespace BusLib.Helper
             }
         }
 
-        public static bool ReleaseTaskWithDeferFlag(this TaskContext context)
+        public static bool ReleaseTaskWithDeferFlag(this TaskContext context, IStateManager steManager)
         {
             context.Logger.Trace($"Defer task from {context.State.DeferredCount}");
 
-            IStateManager steManager = Bus.StateManager;
+            //IStateManager steManager = Bus.StateManager;
 
             IReadWritableTaskState task = context.TaskStateWritable;
             var nextDeferVal = task.DeferredCount + 1;
@@ -193,9 +193,9 @@ namespace BusLib.Helper
             return true;
         }
 
-        internal static void PreserveNextState(this TaskContext context, string state, string taskState=null)
+        internal static void PreserveNextState(this TaskContext context, string state, IStateManager steManager ,  string taskState=null)
         {
-            IStateManager steManager = Bus.StateManager;
+            //IStateManager steManager = Bus.StateManager;
 
             List<KeyValuePair<string, string>> statList=new List<KeyValuePair<string, string>>();
             statList.Add(new KeyValuePair<string, string>(KeyConstants.TaskNextState, state));
@@ -210,9 +210,9 @@ namespace BusLib.Helper
             steManager.UpdateTask(task, context.Transaction);
         }
 
-        public static void MarkGroupStatus(this IReadWritableGroupEntity entity, CompletionStatus completionStatus, ResultStatus result, string reason)
+        public static void MarkGroupStatus(this IReadWritableGroupEntity entity, CompletionStatus completionStatus, ResultStatus result, string reason, IStateManager steManager)
         {
-            IStateManager steManager = Bus.StateManager;
+            //IStateManager steManager = Bus.StateManager;
             var isDone = completionStatus.IsDone();
             if (isDone)
             {

@@ -28,6 +28,8 @@ namespace BusLib.BatchEngineCore.WatchDog
 
         private readonly IProcessDataStorage _storage;
         private readonly IPubSubFactory _pubSubFactory;
+        private readonly IResolver _resolver;
+        private readonly IBatchLoggerFactory _loggerFactory;
 
         private readonly TinyMessageSubscriptionToken _subRem;
 
@@ -47,7 +49,7 @@ namespace BusLib.BatchEngineCore.WatchDog
         public ProcessWatchDog(ILogger logger, IStateManager stateManager,
             IBatchEngineSubscribers batchEngineSubscribers, ICacheAside cacheAside,
             ISerializersFactory serializersFactory, IEntityFactory entityFactory, IEventAggregator eventAggregator,
-            IProcessDataStorage storage, IPubSubFactory pubSubFactory) : base("WatchDog", logger)
+            IProcessDataStorage storage, IPubSubFactory pubSubFactory, IResolver resolver, IBatchLoggerFactory loggerFactory) : base("WatchDog", logger)
         {
             _stateManager = stateManager;
             _batchEngineSubscribers = batchEngineSubscribers;
@@ -55,7 +57,9 @@ namespace BusLib.BatchEngineCore.WatchDog
             _eventAggregator = eventAggregator;
             _storage = storage;
             _pubSubFactory = pubSubFactory;
-            _groupsHandler = new GroupsHandler(logger, batchEngineSubscribers, stateManager, serializersFactory, entityFactory);
+            _resolver = resolver;
+            _loggerFactory = loggerFactory;
+            _groupsHandler = new GroupsHandler(logger, batchEngineSubscribers, stateManager, serializersFactory, entityFactory, resolver, loggerFactory);
             Interval=TimeSpan.FromSeconds(30);
 
             eventAggregator.Subscribe4Broadcast<ProcessGroupRemovedMessage>(RemoveGroup);
@@ -64,8 +68,8 @@ namespace BusLib.BatchEngineCore.WatchDog
             _serializer = SerializersFactory.Instance.GetSerializer(typeof(GroupMessage));
 
             this._volumeGenSub = eventAggregator.Subscribe<TextMessage>(OnVolumeGenerated, Constants.EventProcessVolumeGenerated);
-            _retrySub = Bus.Instance.EventAggregator.Subscribe<TextMessage>(OnVolumeGenerated, Constants.EventProcessRetry);
-            _healthSub = Bus.Instance.EventAggregator.Subscribe4Broadcast<HealthMessage>(PublishHealth);
+            _retrySub = eventAggregator.Subscribe<TextMessage>(OnVolumeGenerated, Constants.EventProcessRetry);
+            _healthSub = eventAggregator.Subscribe4Broadcast<HealthMessage>(PublishHealth);
         }
 
         private void PublishHealth(HealthMessage health)
@@ -148,7 +152,14 @@ namespace BusLib.BatchEngineCore.WatchDog
 
             foreach (var groupEntity in groups)
             {
-                CheckSyncGroup(groupEntity);
+                if (groupEntity.IsGenerated == false)
+                {
+                    HandleNewGroup(groupEntity.Id);
+                }
+                else
+                {
+                    CheckSyncGroup(groupEntity);
+                }
             }
 
             var orphanGroups = _runningGroups.Values.Where(r=> groups.All(g => g.Id != r.GroupEntity.Id)).ToList();
@@ -156,6 +167,8 @@ namespace BusLib.BatchEngineCore.WatchDog
             {
                 CheckGroupHealth(orphan);
             }
+            
+            
         }
 
         void CheckSyncGroup(IReadWritableGroupEntity groupEntity)
@@ -189,6 +202,11 @@ namespace BusLib.BatchEngineCore.WatchDog
                 CheckGroupHealth(@group, false);
             }
         }
+        private Bus _bus;
+        private Bus Bus
+        {
+            get { return _bus ?? (_bus = _resolver.Resolve<Bus>()); }
+        }
 
 
         private void SubmitVolumeRequest(IEnumerable<IReadWritableProcessState> processes, IReadWritableGroupEntity groupDetailsGroupEntity)
@@ -197,8 +215,8 @@ namespace BusLib.BatchEngineCore.WatchDog
             {
                 foreach (var p in processes)
                 {
-                    var volumeMessage = new ProcessExecutionContext(LoggerFactory.GetProcessLogger(p.Id, p.ProcessKey), p, _cacheAside.GetProcessConfiguration(p.ProcessKey), _storage);
-                    Bus.Instance.HandleVolumeRequest(volumeMessage);
+                    var volumeMessage = new ProcessExecutionContext(_loggerFactory.GetProcessLogger(p.Id, p.ProcessKey, p.CorrelationId), p, _cacheAside.GetProcessConfiguration(p.ProcessKey), _storage);
+                    Bus.HandleVolumeRequest(volumeMessage);
                 }
             }
             catch (Exception e)
@@ -219,7 +237,7 @@ namespace BusLib.BatchEngineCore.WatchDog
                 if (processStorageState == null)
                 {
                     Logger.Error($"ProcessId {processId} not in persistence");
-                    Bus.Instance.EventAggregator.Publish(this, Constants.EventProcessFinished, processId.ToString());
+                    Bus.EventAggregator.Publish(this, Constants.EventProcessFinished, processId.ToString());
                     if (!skipGroupHealthCheck) CheckGroupHealth(groupDetails);
                     return;
                 }
@@ -270,7 +288,7 @@ namespace BusLib.BatchEngineCore.WatchDog
             if (groupDetails.GroupEntity.IsFinished)
             {
                 _runningGroups.TryRemove(groupDetails.GroupEntity.Id, out groupDetails);
-                Bus.Instance.EventAggregator.Broadcast(new ProcessGroupRemovedMessage(groupDetails, this));
+                _eventAggregator.Broadcast(new ProcessGroupRemovedMessage(groupDetails, this));
             }
             else
             {
@@ -303,9 +321,9 @@ namespace BusLib.BatchEngineCore.WatchDog
                             ? ResultStatus.Error
                             : ResultStatus.Success;
                     }
-                    groupDetails.GroupEntity.MarkGroupStatus(completionStatus,  status, "Execution end");
+                    groupDetails.GroupEntity.MarkGroupStatus(completionStatus,  status, "Execution end", _stateManager);
                     //todo cleanup group
-                    Bus.Instance.EventAggregator.Broadcast(new ProcessGroupRemovedMessage(groupDetails, this));
+                    _eventAggregator.Broadcast(new ProcessGroupRemovedMessage(groupDetails, this));
 
                 }
                 else
@@ -319,8 +337,8 @@ namespace BusLib.BatchEngineCore.WatchDog
                     }
                     else
                     {
-                        groupDetails.GroupEntity.MarkGroupStatus(CompletionStatus.Stopped, ResultStatus.Invalid, "Execution faulted. No process found");
-                        Bus.Instance.EventAggregator.Broadcast(new ProcessGroupRemovedMessage(groupDetails, this));
+                        groupDetails.GroupEntity.MarkGroupStatus(CompletionStatus.Stopped, ResultStatus.Invalid, "Execution faulted. No process found", _stateManager);
+                        _eventAggregator.Broadcast(new ProcessGroupRemovedMessage(groupDetails, this));
                     }
                 }
 
@@ -349,12 +367,12 @@ namespace BusLib.BatchEngineCore.WatchDog
 
             var processId = state.Id;
             var configuration = _cacheAside.GetProcessConfiguration(state.ProcessKey);
-            var processLogger = LoggerFactory.GetProcessLogger(processId, state.ProcessKey);
+            var processLogger = _loggerFactory.GetProcessLogger(processId, state.ProcessKey, state.CorrelationId);
 
             if (!state.IsExecuting())
             {
                 Logger.Trace($"Process Watchdog not executing with statue IsStopped {state.IsStopped}, IsFinished {state.IsFinished} for processId {processId}");
-                Bus.Instance.EventAggregator.Publish(this, Constants.EventProcessFinished, processId.ToString());
+                _eventAggregator.Publish(this, Constants.EventProcessFinished, processId.ToString());
                 return true;
             }
             var timeoutMins = configuration.ProcessTimeoutMins ?? 0;
@@ -363,7 +381,7 @@ namespace BusLib.BatchEngineCore.WatchDog
             {
                 state.MarkProcessStatus(CompletionStatus.Finished, ResultStatus.Error,
                     $"Process start time is not marked for {processId}", _stateManager);
-                Bus.Instance.EventAggregator.Publish(this, Constants.EventProcessFinished, processId.ToString());
+                _eventAggregator.Publish(this, Constants.EventProcessFinished, processId.ToString());
                 return true;
             }
 
@@ -377,7 +395,7 @@ namespace BusLib.BatchEngineCore.WatchDog
                     processLogger.Error("Timeout");
                     state.MarkProcessStatus(CompletionStatus.Finished, ResultStatus.Error,
                         $"Process timeout {processId}", _stateManager);
-                    Bus.Instance.EventAggregator.Publish(this, Constants.EventProcessFinished, processId.ToString());
+                    _eventAggregator.Publish(this, Constants.EventProcessFinished, processId.ToString());
                     return true;
                 }
 
@@ -409,7 +427,7 @@ namespace BusLib.BatchEngineCore.WatchDog
 
                                     state.MarkProcessStatus(CompletionStatus.Finished, ResultStatus.Error,
                                         $"Retry stopped by extension {processSubscriber.GetType()}", _stateManager);
-                                    Bus.Instance.EventAggregator.Publish(this, Constants.EventProcessStop,
+                                    _eventAggregator.Publish(this, Constants.EventProcessStop,
                                         processId.ToString());
 
                                     return true;
@@ -418,21 +436,21 @@ namespace BusLib.BatchEngineCore.WatchDog
 
                             //todo goto retry
                             processLogger.Warn($"Process going to retry with errors {erroredTasks}");
-                            var retryTasksCount = state.RetryProcess();
+                            var retryTasksCount = state.RetryProcess(_stateManager);
                             processLogger.Info($"{retryTasksCount} marked for retry");
-                            Bus.Instance.EventAggregator.PublishAsync(this, Constants.EventProcessRetry, processId.ToString());
+                            _eventAggregator.PublishAsync(this, Constants.EventProcessRetry, processId.ToString());
                             return false; //not yet completed
                         }
                     }
 
                     state.MarkProcessStatus(CompletionStatus.Finished, ResultStatus.Error, $"Process completed with errors {erroredTasks}", _stateManager);
-                    Bus.Instance.EventAggregator.Publish(this, Constants.EventProcessFinished, processId.ToString());
+                    _eventAggregator.Publish(this, Constants.EventProcessFinished, processId.ToString());
                     return true;
                 }
                 else
                 {
                     state.MarkProcessStatus(CompletionStatus.Finished, ResultStatus.Success, "Process completed", _stateManager);
-                    Bus.Instance.EventAggregator.Publish(this, Constants.EventProcessFinished, processId.ToString());
+                    _eventAggregator.Publish(this, Constants.EventProcessFinished, processId.ToString());
                     return true;
                 }
                 
@@ -512,17 +530,53 @@ namespace BusLib.BatchEngineCore.WatchDog
             else if (message is ProcessRemovedWatchDogMessage processRemoved)
             {
                 Logger.Warn($"Master shouldn't receive process remove message. {processRemoved.ProcessId}");
-                Bus.Instance.EventAggregator.Publish(this, Constants.EventProcessFinished, processRemoved.ToString()); //republish
+                _eventAggregator.Publish(this, Constants.EventProcessFinished, processRemoved.ToString()); //republish
             }
+            else if (message is ProcessGroupAddedMessage groupAddedMessage)
+            {
+                HandleNewGroup(groupAddedMessage.GroupId);
+            }
+
         }
-    
+
+        private void HandleNewGroup(long groupId)
+        {
+            var groupEntity = _stateManager.GetGroupEntity(groupId);
+
+            GroupMessage msg = new GroupMessage
+            {
+                Action = GroupActions.Start,
+                Criteria = _serializer.DeserializeFromString<List<JobCriteria>>(groupEntity.Criteria),
+                GroupId = groupId,
+                Group = groupEntity
+            };
+            if (!string.IsNullOrWhiteSpace(groupEntity.Payload))
+            {
+                msg.IsProcessSubmission = true;
+                msg.ProcessKeys = _serializer.DeserializeFromString<List<int>>(groupEntity.Payload);
+            }
+            else
+            {
+                if (groupEntity.GroupKey == 0)
+                {
+                    Logger.Error("Group {id} invalid with no payload and GroupKey", groupId);
+                    groupEntity.MarkGroupStatus(CompletionStatus.Stopped, ResultStatus.Invalid, "Execution faulted. No process found", _stateManager);
+                    return;
+                }
+                
+            }
+
+            msg.SetGroupEntity(groupEntity);
+
+            HandleGroup(msg);
+        }
 
         #endregion
 
         internal override void OnStart()
         {
             base.OnStart();
-            _slaveMessageSubscriber = Bus.PubSubFactory.GetSubscriber(Interrupter.Token, Logger, nameof(IWatchDogMessage));
+            _slaveMessageSubscriber = _pubSubFactory.GetSubscriber(Interrupter.Token, Logger, nameof(IWatchDogMessage));
             //_slaveMessageSubscriber.Subscribe(nameof(IWatchDogMessage), HandleSlaveMessages);
 
             _slaveMessageSubscriber.Subscribe(nameof(GroupMessage), s => HandleWatchDogMessage<GroupMessage>(s,
@@ -542,7 +596,7 @@ namespace BusLib.BatchEngineCore.WatchDog
             _slaveMessageSubscriber.Subscribe(nameof(ProcessInputIdleWatchDogMessage),
                 s => HandleWatchDogMessage<ProcessInputIdleWatchDogMessage>(s));
 
-            _publisher = Bus.PubSubFactory.GetPublisher(Interrupter.Token, Logger, nameof(IWatchDogMessage));
+            _publisher = _pubSubFactory.GetPublisher(Interrupter.Token, Logger, nameof(IWatchDogMessage));
 
         }
 

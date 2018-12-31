@@ -16,12 +16,14 @@ namespace BusLib.BatchEngineCore.Handlers
         private readonly bool _isStateful;
 
         private ConcurrentDictionary<string, string> _stateDictionary=null;
+        private readonly IStateManager _stateManager;
 
-        public TaskContext(bool isStateful, SafeDisposableActions onCompleteActions, IReadWritableTaskState state)
+        public TaskContext(bool isStateful, SafeDisposableActions onCompleteActions, IReadWritableTaskState state, IStateManager stateManager)
         {
             _isStateful = isStateful;
             OnCompleteActions = onCompleteActions;
             TaskStateWritable = state;
+            _stateManager = stateManager;
         }
 
         public ILogger Logger { get; internal set; }
@@ -52,7 +54,7 @@ namespace BusLib.BatchEngineCore.Handlers
 
         public bool Defer()
         {
-            IsDeferred = this.ReleaseTaskWithDeferFlag();
+            IsDeferred = this.ReleaseTaskWithDeferFlag(_stateManager);
             return IsDeferred;
         }
 

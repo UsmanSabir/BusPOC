@@ -26,8 +26,9 @@ namespace BusLib.BatchEngineCore
         private int _delayInRetries = 3000; //todo
         private readonly IVolumeHandler _volumeHandler;
         private CancellationToken _token;
+        private readonly IResolver _resolver;
 
-        public ProcessVolumeRequestHandler(ILogger logger, IStateManager stateManager, ICacheAside cacheAside, IProcessRepository registeredProcesses, IVolumeHandler volumeHandler, CancellationToken token)
+        public ProcessVolumeRequestHandler(ILogger logger, IStateManager stateManager, ICacheAside cacheAside, IProcessRepository registeredProcesses, IVolumeHandler volumeHandler, CancellationToken token, IResolver resolver)
         {
             _logger = logger;
             _stateManager = stateManager;
@@ -35,6 +36,7 @@ namespace BusLib.BatchEngineCore
             _registeredProcesses = registeredProcesses;
             _volumeHandler = volumeHandler;
             _token = token;
+            _resolver = resolver;
         }
 
         void Execute(ProcessExecutionContext context)
@@ -111,7 +113,7 @@ namespace BusLib.BatchEngineCore
                 var processConfig = _cacheAside.GetProcessConfiguration(key);
                 var maxVolumeRetries = processConfig.MaxVolumeRetries;
 
-                Pipeline<IProcessExecutionContext> pipeline = new Pipeline<IProcessExecutionContext>(new VolumeGenerator(process, _stateManager, _volumeHandler));
+                Pipeline<IProcessExecutionContext> pipeline = new Pipeline<IProcessExecutionContext>(new VolumeGenerator(process, _stateManager, _volumeHandler, _resolver));
                 
                 if (maxVolumeRetries != 0) // -1 means unlimited retries
                 {
@@ -147,14 +149,23 @@ namespace BusLib.BatchEngineCore
             private readonly IBaseProcess _process;
             private readonly IStateManager _stateManager;
             private readonly IVolumeHandler _volumeHandler; //todo initialize based on configuration or fixed?
+            private readonly IResolver _resolver;
 
 
-            public VolumeGenerator(IBaseProcess process, IStateManager stateManager, IVolumeHandler volumeHandler)
+            public VolumeGenerator(IBaseProcess process, IStateManager stateManager, IVolumeHandler volumeHandler, IResolver resolver)
             {
                 _process = process;
                 _stateManager = stateManager;
                 this._volumeHandler = volumeHandler;
+                _resolver = resolver;
             }
+
+            private Bus _bus;
+            private Bus Bus
+            {
+                get { return _bus ?? (_bus = _resolver.Resolve<Bus>()); }
+            }
+
 
             public void Handle(IProcessExecutionContext message)
             {
@@ -182,7 +193,7 @@ namespace BusLib.BatchEngineCore
                 
                 message.Logger.Trace("Marking process as Generated");
                 processState.MarkAsVolumeGenerated(_stateManager);
-                Bus.Instance.EventAggregator.PublishAsync(this, Constants.EventProcessVolumeGenerated, processState.Id.ToString());
+                Bus.EventAggregator.PublishAsync(this, Constants.EventProcessVolumeGenerated, processState.Id.ToString());
             }
 
             public void Dispose()

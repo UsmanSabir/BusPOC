@@ -22,8 +22,8 @@ namespace BusLib
 {
     public class Bus
     {
-        static Bus _instance;
-        public static Bus Instance => _instance ?? (_instance = new Bus());
+        //static Bus _instance;
+        //public static Bus Instance => _instance ?? (_instance = new Bus());
         public IEventAggregator EventAggregator { get; private set; }
         
         private Pipeline<TaskMessage> _taskProcessorPipeline;
@@ -44,12 +44,14 @@ namespace BusLib
         private readonly ICacheAside _cacheAside;
         private readonly TaskProducerWorker _taskProducer;
 
-        internal static IEntityFactory EntityFactory;//todo
-        internal static IStateManager StateManager;//todo
-        internal static IVolumeHandler VolumeHandler;//todo
-        internal static IProcessDataStorage Storage;//todo
-        internal static IPubSubFactory PubSubFactory;//todo
-        internal static IDistributedMutexFactory DistributedMutexFactory; //todo
+        private readonly IEntityFactory EntityFactory;//todo
+        private readonly IStateManager _stateManager;//todo
+        private readonly IVolumeHandler VolumeHandler;//todo
+        private readonly IProcessDataStorage _storage;//todo
+        private readonly IPubSubFactory PubSubFactory;//todo
+        private readonly IDistributedMutexFactory DistributedMutexFactory; //todo
+        private readonly IResolver _resolver;
+        private readonly IBatchLoggerFactory _batchLoggerFactory;
 
         private readonly ProcessRepository _processRepository;
         //private readonly ProcessWatchDog _watchDog;
@@ -61,36 +63,45 @@ namespace BusLib
         private readonly CancellationTokenSource _cts;
         private readonly DatabasePipeline _databasePipeline;
 
-        public Bus()
+        public Bus(IEntityFactory entityFactory, IVolumeHandler volumeHandler, IPubSubFactory pubSubFactory, IStateManager stateManager, IProcessDataStorage storage,
+            IDistributedMutexFactory distributedMutexFactory, IResolver resolver, IBatchLoggerFactory batchLoggerFactory)
         {
+            EntityFactory = entityFactory;
+            VolumeHandler = volumeHandler;
+            PubSubFactory = pubSubFactory;
+            _stateManager = stateManager;
+            _storage = storage;
+            DistributedMutexFactory = distributedMutexFactory;
+            _resolver = resolver;
+            _batchLoggerFactory = batchLoggerFactory;
             _cts=new CancellationTokenSource();
             _cancellationToken = _cts.Token;
             HookExceptionEvents();
 
-            _logger = LoggerFactory.GetSystemLogger();
+            _logger = batchLoggerFactory.GetSystemLogger();
             EventAggregator = new TinyEventAggregator();
 
-            var wrapper = new BusStateManager(StateManager, _logger);
-            StateManager = wrapper;
+            var wrapper = new BusStateManager(_stateManager, _logger, resolver);
+            _stateManager = wrapper;
 
-            var originalStorage = Storage;
-            Storage = new CacheBusWrapper(_logger, originalStorage);
+            var originalStorage = _storage;
+            _storage = new CacheBusWrapper(_logger, originalStorage, resolver);
             _cacheCommandPipeline=new CacheStoragePipeline(_logger, _cancellationToken, originalStorage);
             
 
-            _cacheAside = new CacheAside(StateManager, Storage, EventAggregator, _logger);
+            _cacheAside = new CacheAside(_stateManager, _storage, EventAggregator, _logger, batchLoggerFactory);
             _processRepository = new ProcessRepository();
-            _taskExecutorsRepo = new TaskExecutorsPool(_logger, _cacheAside, _cancellationToken, StateManager, _processRepository);
+            _taskExecutorsRepo = new TaskExecutorsPool(_logger, _cacheAside, _cancellationToken, _stateManager, _processRepository, EventAggregator, resolver, _logger);
             
             
             //BuildCommandHandlerPipeline();
             _statePersistencePipeline = new StatePersistencePipeline(_logger, _cancellationToken);
-            this._databasePipeline = new DatabasePipeline(_logger, _cancellationToken);
+            this._databasePipeline = new DatabasePipeline(_logger, _cancellationToken, 500);//todo
 
             _taskProcessorPipeline = GetTaskProcessorPipeLine();
             //_grouPipeline=new GroupHandlerPipeline(_stateManager, _logger, _branchEngineSubscriber);
             
-            _volumePipeline = new ProcessVolumePipeline(_cancellationToken, _logger, StateManager, _cacheAside, _processRepository, VolumeHandler);
+            _volumePipeline = new ProcessVolumePipeline(_cancellationToken, _logger, _stateManager, _cacheAside, _processRepository, VolumeHandler, resolver);
             _branchEngineSubscriber = new BatchEngineSubscribers();
             
             //_watchDog = new ProcessWatchDog(_logger, StateManager, _branchEngineSubscriber, _cacheAside, SerializersFactory.Instance, EntityFactory, EventAggregator, Storage);
@@ -98,9 +109,9 @@ namespace BusLib
             // _grouPipeline = new Pipeline<GroupMessage>(_watchDog);
             //_watchDogPipeline = new Pipeline<IWatchDogMessage>(_watchDog);
 
-            _taskProducer =new TaskProducerWorker(_logger, _cacheAside, VolumeHandler);
+            _taskProducer =new TaskProducerWorker(_logger, _cacheAside, VolumeHandler, resolver, batchLoggerFactory);
 
-            _leaderManager = DistributedMutexFactory.CreateDistributedMutex(NodeSettings.Instance.LockKey, RunLocalWatchDog, () => SwitchToPubSubWatchDog(null));
+            _leaderManager = DistributedMutexFactory.CreateDistributedMutex(NodeSettings.Instance.LockKey, RunLocalWatchDog, () => SwitchToPubSubWatchDog(null), batchLoggerFactory.GetSystemLogger());
         }
 
         #region Master/Slave
@@ -123,7 +134,8 @@ namespace BusLib
                 _logger.Info("Switching to Master node");
                 _watchDogCancellationTokenSource?.Cancel();
 
-                var watchDog = new ProcessWatchDog(_logger, StateManager, _branchEngineSubscriber, _cacheAside, SerializersFactory.Instance, EntityFactory, EventAggregator, Storage, PubSubFactory);
+                var watchDog = new ProcessWatchDog(_logger, _stateManager, _branchEngineSubscriber, _cacheAside, SerializersFactory.Instance, EntityFactory, 
+                    EventAggregator, _storage, PubSubFactory, _resolver, _batchLoggerFactory);
                 _watchDogPipeline = new Pipeline<IWatchDogMessage>(watchDog);
 
                 _watchDogCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationToken);
@@ -159,7 +171,7 @@ namespace BusLib
                 _logger.Info("Switching to Slave node");
                 _watchDogCancellationTokenSource?.Cancel();
 
-                var pubSubWatchDog = new PubSubWatchDog(_logger, StateManager, PubSubFactory, _cancellationToken);
+                var pubSubWatchDog = new PubSubWatchDog(_logger, _stateManager, PubSubFactory, _cancellationToken, EventAggregator);
                 _watchDogPipeline = new Pipeline<IWatchDogMessage>(pubSubWatchDog);
 
                 _watchDogCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationToken);
@@ -198,18 +210,18 @@ namespace BusLib
 
         private void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
         {
-            _logger.Fetal($"Unhandled task exception message {e.Exception?.GetBaseException()?.ToString() ?? string.Empty}", e.Exception);
+            _logger.Fatal($"Unhandled task exception message {e.Exception?.GetBaseException()?.ToString() ?? string.Empty}", e.Exception);
             e.SetObserved();
             ((AggregateException)e.Exception).Handle(ex =>
             {
-                _logger.Fetal($"Task unhandled exception type: {ex.ToString()}", ex);
+                _logger.Fatal($"Task unhandled exception type: {ex.ToString()}", ex);
                 return true;
             });
         }
 
         private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            _logger.Fetal($"Unhandled application error with terminating flag {e.IsTerminating} and message {e.ExceptionObject??string.Empty}");
+            _logger.Fatal($"Unhandled application error with terminating flag {e.IsTerminating} and message {e.ExceptionObject??string.Empty}");
             
         }
 
@@ -228,7 +240,7 @@ namespace BusLib
                 return;
             }
 
-            _dashboardService=new DashboardService(PubSubFactory, _logger, Storage, StateManager);
+            _dashboardService=new DashboardService(PubSubFactory, _logger, _storage, _stateManager, this);
 
             await _leaderManager.RunTaskWhenMutexAcquired(_cancellationToken).ContinueWith(r =>
             {
@@ -280,7 +292,7 @@ namespace BusLib
 
         private Pipeline<TaskMessage> GetTaskProcessorPipeLine()
         {
-            Pipeline<TaskMessage> tasksPipeline=new TaskProcessingPipeline(LoggerFactory.GetSystemLogger(), _taskExecutorsRepo);
+            Pipeline<TaskMessage> tasksPipeline=new TaskProcessingPipeline(_batchLoggerFactory.GetSystemLogger(), _taskExecutorsRepo);
             return tasksPipeline;
         }
 

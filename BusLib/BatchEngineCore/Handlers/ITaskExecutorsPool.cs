@@ -27,6 +27,9 @@ namespace BusLib.BatchEngineCore.Handlers
         private TinyMessageSubscriptionToken _subStop;
         private TinyMessageSubscriptionToken _subRem;
         private TinyMessageSubscriptionToken _healthSub;
+        private readonly IEventAggregator _eventAggregator;
+        private readonly IResolver _resolver;
+        private readonly IFrameworkLogger _frameworkLogger;
 
         #region commented
 
@@ -74,22 +77,26 @@ namespace BusLib.BatchEngineCore.Handlers
 
         #endregion
 
-        public TaskExecutorsPool(ILogger logger, ICacheAside cacheAside, CancellationToken token, IStateManager stateManager, IProcessRepository processRepository) : base(nameof(TaskExecutorsPool), logger)
+        public TaskExecutorsPool(ILogger logger, ICacheAside cacheAside, CancellationToken token, IStateManager stateManager, IProcessRepository processRepository, IEventAggregator eventAggregator
+        ,IResolver resolver, IFrameworkLogger frameworkLogger) : base(nameof(TaskExecutorsPool), logger)
         {
             _cacheAside = cacheAside;
             _token = token;
             _stateManager = stateManager;
             _processRepository = processRepository;
+            _eventAggregator = eventAggregator;
+            _resolver = resolver;
+            _frameworkLogger = frameworkLogger;
             //Start(_token);
         }
 
         internal override void OnStart()
         {
             base.OnStart();
-            this._subRem = Bus.Instance.EventAggregator.Subscribe<TextMessage>(ProcessRemoved, Constants.EventProcessFinished);
-            this._subStop= Bus.Instance.EventAggregator.Subscribe<TextMessage>(ProcessStopped, Constants.EventProcessStop);
+            this._subRem = this._eventAggregator.Subscribe<TextMessage>(ProcessRemoved, Constants.EventProcessFinished);
+            this._subStop= _eventAggregator.Subscribe<TextMessage>(ProcessStopped, Constants.EventProcessStop);
 
-            this._healthSub = Bus.Instance.EventAggregator.Subscribe4Broadcast<HealthMessage>(PublishHealth);
+            this._healthSub = _eventAggregator.Subscribe4Broadcast<HealthMessage>(PublishHealth);
         }
 
         private void PublishHealth(HealthMessage health)
@@ -118,9 +125,9 @@ namespace BusLib.BatchEngineCore.Handlers
         {
             base.OnStopping();
 
-            Bus.Instance.EventAggregator.Unsubscribe(_healthSub);
-            Bus.Instance.EventAggregator.Unsubscribe(_subRem);
-            Bus.Instance.EventAggregator.Unsubscribe(_subStop);
+            _eventAggregator.Unsubscribe(_healthSub);
+            _eventAggregator.Unsubscribe(_subRem);
+            _eventAggregator.Unsubscribe(_subStop);
             _subStop = _subRem = null;
         }
 
@@ -159,12 +166,17 @@ namespace BusLib.BatchEngineCore.Handlers
             var consumer = _processConsumer.GetOrAdd(processId, id=> BuildProcessConsumer(id, processKey, groupId));
             return consumer;
         }
+        private Bus _bus;
+        private Bus Bus
+        {
+            get { return _bus ?? (_bus = _resolver.Resolve<Bus>()); }
+        }
 
         private ProcessConsumer BuildProcessConsumer(long processId, int processKey, long groupId)
         {
             Logger.Trace($"Process consumer build start for processId {processId}");
             var taskHandler = _processRepository.GetProcessTaskHandler(processKey);
-            ProcessConsumer consumer = new ProcessConsumer(_token, processKey, processId, groupId, _stateManager, LoggerFactory.GetSystemLogger(), _cacheAside, taskHandler, _processRepository.GetSerializer(taskHandler));
+            ProcessConsumer consumer = new ProcessConsumer(_token, processKey, processId, groupId, _stateManager, _frameworkLogger, _cacheAside, taskHandler, _processRepository.GetSerializer(taskHandler), Bus, _frameworkLogger);
             consumer.SweeperAction = Trigger;
             consumer.Start();
             consumer.Completion.ContinueWith(c =>

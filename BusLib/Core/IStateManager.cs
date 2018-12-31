@@ -34,7 +34,7 @@ namespace BusLib.Core
         IReadWritableProcessState GetAndStartProcessById(long processId);
         IReadWritableProcessState GetProcessById(long processId);
         //IReadWritableProcessState GetProcessByKey(int processKey);
-        void AddGroupProcess(List<IReadWritableProcessState> groupProcesses);
+        void AddGroupProcess(List<IReadWritableProcessState> groupProcesses, IGroupEntity groupEntity);
         void SaveGroup(IReadWritableGroupEntity group);
         IReadWritableGroupEntity CreateGroupEntity(IReadWritableGroupEntity entity);
         IReadWritableGroupEntity GetGroupEntity(long groupId);

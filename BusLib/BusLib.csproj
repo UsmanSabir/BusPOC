@@ -38,8 +38,8 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Caching" />
-    <Reference Include="System.ValueTuple, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.ValueTuple.4.3.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net461\System.ValueTuple.dll</HintPath>
     </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -57,7 +57,7 @@
     <Compile Include="BatchEngineCore\Groups\GroupHandlerPipeline.cs" />
     <Compile Include="BatchEngineCore\Groups\GroupMessage.cs" />
     <Compile Include="BatchEngineCore\Groups\IGroupContext.cs" />
-    <Compile Include="BatchEngineCore\ProcessExecutionCriteria.cs" />
+    <Compile Include="BatchEngineCore\JobCriteria.cs" />
     <Compile Include="BatchEngineCore\Process\IProcessRepository.cs" />
     <Compile Include="BatchEngineCore\PubSub\DashboardService.cs" />
     <Compile Include="BatchEngineCore\PubSub\HealthMessage.cs" />
@@ -71,7 +71,7 @@
     <Compile Include="BatchEngineCore\IBatchEngineSubscribers.cs" />
     <Compile Include="BatchEngineCore\Handlers\ITaskExecutorsPool.cs" />
     <Compile Include="BatchEngineCore\ITransaction.cs" />
-    <Compile Include="BatchEngineCore\LoggerFactory.cs" />
+    <Compile Include="BatchEngineCore\BatchLoggerFactory.cs" />
     <Compile Include="BatchEngineCore\NodeSettings.cs" />
     <Compile Include="BatchEngineCore\PubSub\IBroadcastMessage.cs" />
     <Compile Include="BatchEngineCore\PubSub\IProcessSubscriber.cs" />
@@ -107,6 +107,7 @@
     <Compile Include="Helper\CB\CircuitBreakerStateStore.cs" />
     <Compile Include="Helper\CB\CircuitBreakerStateStoreFactory.cs" />
     <Compile Include="Helper\CB\ICircuitBreakerStateStore.cs" />
+    <Compile Include="Helper\IResolver.cs" />
     <Compile Include="Helper\SafeDisposable.cs" />
     <Compile Include="Helper\SafeDisposableActions.cs" />
     <Compile Include="Helper\Extensions.cs" />
@@ -121,15 +122,19 @@
     <Compile Include="Helper\SystemHealth\Models\ProcessorSystemInfo.cs" />
     <Compile Include="Helper\SystemHealth\OSInfoProvider.cs" />
     <Compile Include="Helper\SystemHealth\ProcessorHealthProvider.cs" />
+    <Compile Include="Helper\Throttling\ThrottlerGate.cs" />
     <Compile Include="Helper\TransientFaultHandling.cs" />
     <Compile Include="Helper\WeakAction.cs" />
     <Compile Include="Infrastructure\IProcessDataStorage.cs" />
+    <Compile Include="JobScheduler\IJobScheduler.cs" />
+    <Compile Include="JobScheduler\JobSchedulerInternal.cs" />
     <Compile Include="PipelineFilters\CircuitBreakerFeatureHandler.cs" />
     <Compile Include="PipelineFilters\ConsumerFilter.cs" />
     <Compile Include="PipelineFilters\DuplicateCheckFilter.cs" />
     <Compile Include="PipelineFilters\RetryFeatureHandler.cs" />
     <Compile Include="PipelineFilters\TasksThrottlingFilter.cs" />
     <Compile Include="PipelineFilters\ThrottlingFilter.cs" />
+    <Compile Include="PipelineFilters\TimeBasedThrottlingFilter.cs" />
     <Compile Include="ProcessLocks\DistributedMutex.cs" />
     <Compile Include="PipelineFilters\LockMessageFilter.cs" />
     <Compile Include="BatchEngineCore\BaseProcess.cs" />
@@ -167,7 +172,7 @@
     <Compile Include="Helper\DynamicLibrary.cs" />
     <Compile Include="Helper\Enumeration.cs" />
     <Compile Include="Helper\FastExpressionCompiler.cs" />
-    <Compile Include="Helper\Throttler.cs" />
+    <Compile Include="Helper\Throttling\Throttler.cs" />
     <Compile Include="Infrastructure\AppServerQuery.cs" />
     <Compile Include="Infrastructure\ActionCommand.cs" />
     <Compile Include="Infrastructure\DbQuery.cs" />

@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusLib.Infrastructure
+namespace BusImpl
 {
-    class DbCommand : ICommand
+    public class Class1
     {
-        public Action Action => throw new NotImplementedException();
     }
 }

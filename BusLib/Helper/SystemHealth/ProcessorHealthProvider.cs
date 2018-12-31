@@ -27,7 +27,7 @@ namespace BusLib.Helper.SystemHealth
         private bool canUseCounters = false;
         private PerformanceCounter[] cpuUsageCounters = null;
 
-        private readonly IFrameworkLogger logger= LoggerFactory.GetSystemLogger();
+        //private readonly IFrameworkLogger logger= BatchLoggerFactory.GetSystemLogger();
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool GetSystemTimes(
@@ -163,7 +163,7 @@ namespace BusLib.Helper.SystemHealth
                 canUseCounters = EnablePerformanceCounters(true);
 
                 firstRun = false;
-                logger.Trace("Performance Counters Enabled? " + canUseCounters);
+                //logger.Trace("Performance Counters Enabled? " + canUseCounters);
                 // Initialise this for the first time.
                 timeOfLastCallForProcessTime = DateTime.Now;
                 prevProcessTime = Process.GetCurrentProcess().TotalProcessorTime;
@@ -186,7 +186,7 @@ namespace BusLib.Helper.SystemHealth
             double executorCPUUsagePercent = 100 * (processTime.TotalMilliseconds - prevProcessTime.TotalMilliseconds) / interval.TotalMilliseconds;
             if (executorCPUUsagePercent > 100.00)
             {
-                logger.Warn("CPU Usage for this process measured over 100%. Setting value to 100%.");
+                //logger.Warn("CPU Usage for this process measured over 100%. Setting value to 100%.");
                 executorCPUUsagePercent = 100.00;
             }
             timeOfLastCallForProcessTime = timeNow;
@@ -207,7 +207,7 @@ namespace BusLib.Helper.SystemHealth
 
                         if (nextValue > 100.00)
                         {
-                            logger.Warn("CPU Usage for overall system measured over 100%. Setting value to 100%.");
+                            //logger.Warn("CPU Usage for overall system measured over 100%. Setting value to 100%.");
                             nextValue = 100.00;
                         }
                         ProcessorPerformanceInfo perfInfo =
@@ -218,7 +218,7 @@ namespace BusLib.Helper.SystemHealth
             }
             catch (System.UnauthorizedAccessException ux)
             {
-                logger.Warn("Cannot access performance counter data: " + ux.Message);
+                //logger.Warn("Cannot access performance counter data: " + ux.Message);
                 canUseCounters = false;
             }
 
@@ -255,7 +255,7 @@ namespace BusLib.Helper.SystemHealth
                 }
                 else
                 {
-                    logger.Warn("GetSystemTimes returned false");
+                    //logger.Warn("GetSystemTimes returned false");
                 }
 
                 double individualCpuUsagePercent = cpuUsagePercent;
@@ -264,7 +264,7 @@ namespace BusLib.Helper.SystemHealth
 
                 if (individualCpuUsagePercent > 100.00)
                 {
-                    logger.Warn("CPU Usage for overall system measured over 100% (per core). Setting value to 100% (per core).");
+                    //logger.Warn("CPU Usage for overall system measured over 100% (per core). Setting value to 100% (per core).");
                     individualCpuUsagePercent = 100.00;
                 }
 
@@ -294,7 +294,7 @@ namespace BusLib.Helper.SystemHealth
                 if (cpuUsageCounters == null)
                 {
                     // Check # CPUs & create a counter for each one.
-                    logger.Trace("Initialising counters...");
+                    //logger.Trace("Initialising counters...");
                     // Create a counter for each CPU (we need to use the 0, 1, 2... to identify CPUS)
                     cpuUsageCounters = new PerformanceCounter[processorCount];
                     for (int i = 0; i < processorCount; i++)
@@ -304,7 +304,7 @@ namespace BusLib.Helper.SystemHealth
                         cpuUsageCounters[i].CategoryName = "Processor";
                         cpuUsageCounters[i].CounterName = "% Processor Time";
                         cpuUsageCounters[i].InstanceName = i.ToString();
-                        logger.Trace("Created Counter for CPU #" + i);
+                        //logger.Trace("Created Counter for CPU #" + i);
                     }
                 }
                 return cpuUsageCounters;
@@ -332,7 +332,7 @@ namespace BusLib.Helper.SystemHealth
             RegistryKey hklm = null;
             try
             {
-                logger.Trace("Checking Registry if Performance Counters Enabled");
+                //logger.Trace("Checking Registry if Performance Counters Enabled");
                 // Check registry to see if Performance counter is enabled for Processor (only needed for 2000 and XP)
                 hklm = Registry.LocalMachine;
                 hklm = hklm.OpenSubKey("SYSTEM\\CurrentControlSet\\Services\\PerfOS\\Performance");
@@ -346,13 +346,13 @@ namespace BusLib.Helper.SystemHealth
                 }
                 else
                 {
-                    logger.Trace("Value is : " + (string)value);
+                    //logger.Trace("Value is : " + (string)value);
 
                     // If enable and disable are equal we need to set the registry otherwise we are fine.
                     if (disable != disabled)
                     {
-                        logger.Trace("Need to set the Registry");
-                        logger.Trace("Checking for access to Registry");
+                        //logger.Trace("Need to set the Registry");
+                        //logger.Trace("Checking for access to Registry");
                         hklm = Registry.LocalMachine;
                         hklm = hklm.OpenSubKey("SYSTEM\\CurrentControlSet\\Services\\PerfOS\\Performance", true);
                         if (hklm == null)
@@ -360,7 +360,7 @@ namespace BusLib.Helper.SystemHealth
                     }
                     else
                     {
-                        logger.Trace("Dont need to set the Registry");
+                        //logger.Trace("Dont need to set the Registry");
                         enabled = true;
                     }
                 }
@@ -368,7 +368,7 @@ namespace BusLib.Helper.SystemHealth
             catch (Exception e)
             {
                 // Failed to set the key
-                logger.Warn("Failed to set the Performance Counter. {0}", e);
+                //logger.Warn("Failed to set the Performance Counter. {0}", e);
             }
             finally
             {

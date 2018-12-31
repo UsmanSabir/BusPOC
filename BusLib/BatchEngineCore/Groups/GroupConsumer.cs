@@ -22,7 +22,7 @@ namespace BusLib.BatchEngineCore.Groups
 
         void OnGroupSubscriptionReceived(IGroupEntity group)
         {
-            //var groupLogger = LoggerFactory.GetGroupLogger(group.Id);
+            //var groupLogger = BatchLoggerFactory.GetGroupLogger(group.Id);
             //IGroupStartContext context=new GroupStartContext(group, groupLogger);
 
             //foreach (var groupSubscriber in _groupSubscribers)

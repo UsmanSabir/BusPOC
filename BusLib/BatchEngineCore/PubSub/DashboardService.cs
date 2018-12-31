@@ -21,13 +21,15 @@ namespace BusLib.BatchEngineCore.PubSub
         private const string dashboardChannel = "Dashboard";
         private const string statusRequest = "status";
         private readonly IProcessDataStorage _cacheStorage;
-        private IStateManager _stateManager;
+        private readonly IStateManager _stateManager;
+        private readonly Bus _bus;
 
-        public DashboardService(IPubSubFactory pubSubFactory, ILogger logger, IProcessDataStorage cacheStorage, IStateManager stateManager):base(nameof(DashboardService), logger)
+        public DashboardService(IPubSubFactory pubSubFactory, ILogger logger, IProcessDataStorage cacheStorage, IStateManager stateManager, Bus bus):base(nameof(DashboardService), logger)
         {
             _pubSubFactory = pubSubFactory;
             _cacheStorage = cacheStorage;
             _stateManager = stateManager;
+            _bus = bus;
         }
 
         internal override void OnStart()
@@ -62,7 +64,7 @@ namespace BusLib.BatchEngineCore.PubSub
             healthMessage.Add(GetCacheHealth());
             healthMessage.Add(GetDatabaseHealth());
 
-            Bus.Instance.EventAggregator.Broadcast(healthMessage);
+            _bus.EventAggregator.Broadcast(healthMessage);
 
             PublishMessage(healthMessage);
         }

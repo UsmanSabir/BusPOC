@@ -8,20 +8,78 @@ namespace BusLib.Core
 {
     public interface ILogger
     {
-        void Trace(string message);
+        void Trace(string message, params object[] args);
 
-        void Info(string info);
+        void Info(string info, params object[] args);
 
-        void Warn(string warn);
-        void Warn(string message, Exception e);
+        void Warn(string warn, params object[] args);
+        void Warn(string message, Exception e, params object[] args);
         void Error(string error);
-        void Error(string error, Exception exception);
+        void Error(string error, params object[] args);
+        void Error(string error, Exception exception, params object[] args);
 
-        void Fetal(string error);
-        void Fetal(string error, Exception exception);
+        void Fatal(string error, params object[] args);
+        void Fatal(string error, Exception exception, params object[] args);
     }
 
-    internal interface IFrameworkLogger : ILogger
+    public interface IFrameworkLogger : ILogger
     {
+    }
+
+    internal class PrependedLogger :ILogger
+    {
+        private readonly ILogger _loggerImplementation;
+        private readonly string _prependMessage;
+
+        public PrependedLogger(ILogger loggerImplementation, string prependMessage)
+        {
+            _loggerImplementation = loggerImplementation;
+            _prependMessage = prependMessage;
+        }
+
+        public void Trace(string message, params object[] args)
+        {
+            _loggerImplementation.Trace($"{_prependMessage} {message}", args);
+        }
+
+        public void Info(string info, params object[] args)
+        {
+            _loggerImplementation.Info(_prependMessage + " " + info, args);
+        }
+
+        public void Warn(string warn, params object[] args)
+        {
+            _loggerImplementation.Warn(_prependMessage + " " + warn, args);
+        }
+
+        public void Warn(string message, Exception e, params object[] args)
+        {
+            _loggerImplementation.Warn(_prependMessage + " " + message, e, args);
+        }
+
+        public void Error(string error)
+        {
+            _loggerImplementation.Error(_prependMessage + " " + error);
+        }
+
+        public void Error(string error, params object[] args)
+        {
+            _loggerImplementation.Error(_prependMessage, args);
+        }
+
+        public void Error(string error, Exception exception, params object[] args)
+        {
+            _loggerImplementation.Error(_prependMessage + " " + error, exception, args);
+        }
+
+        public void Fatal(string error, params object[] args)
+        {
+            _loggerImplementation.Fatal(_prependMessage + " " + error, args);
+        }
+
+        public void Fatal(string error, Exception exception, params object[] args)
+        {
+            _loggerImplementation.Fatal(_prependMessage + " " + error, exception, args);
+        }
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using BusLib.BatchEngineCore.Groups;
 using BusLib.Core;
+using BusLib.Helper;
 using BusLib.Infrastructure;
 
 namespace BusLib.BatchEngineCore.StatePersistence
@@ -10,6 +11,9 @@ namespace BusLib.BatchEngineCore.StatePersistence
     {
         private readonly IStateManager _stateManagerImplementation;
         private readonly ILogger _logger;
+
+        private IResolver _resolver;
+        private Bus _bus;
 
         T Execute<T>(Func<T> func)
         {
@@ -28,19 +32,27 @@ namespace BusLib.BatchEngineCore.StatePersistence
 
             try
             {
-                Bus.Instance.HandleStateManagerCommand(action);
+                Bus.HandleStateManagerCommand(action);
             }
             catch (Exception e)
             {
-                _logger.Fetal($"Error executing state command. {e.Message}", e);
+                _logger.Fatal($"Error executing state command. {e.Message}", e);
                 //todo shutdown
             }
         }
 
-        public BusStateManager(IStateManager stateManagerImplementation, ILogger logger)
+        private Bus Bus
+        {
+            get { return _bus ?? (_bus = _resolver.Resolve<Bus>()); }
+        }
+
+        public BusStateManager(IStateManager stateManagerImplementation, ILogger logger, IResolver resolver)
         {
             _stateManagerImplementation = stateManagerImplementation;
             this._logger = logger;
+            _resolver = resolver;
+
+            //this._bus = _resolver.Resolve<Bus>();
         }
 
         public IEnumerable<IReadWritableGroupEntity> GetAllIncomplete()
@@ -88,9 +100,9 @@ namespace BusLib.BatchEngineCore.StatePersistence
             return Execute(() => _stateManagerImplementation.GetProcessById(processId));
         }
 
-        public void AddGroupProcess(List<IReadWritableProcessState> groupProcesses)
+        public void AddGroupProcess(List<IReadWritableProcessState> groupProcesses, IGroupEntity groupEntity)
         {
-            Execute(() =>_stateManagerImplementation.AddGroupProcess(groupProcesses));
+            Execute(() =>_stateManagerImplementation.AddGroupProcess(groupProcesses, groupEntity));
         }
 
         public void SaveGroup(IReadWritableGroupEntity @group)

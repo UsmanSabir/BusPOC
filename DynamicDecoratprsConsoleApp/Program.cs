@@ -26,7 +26,7 @@ namespace DynamicDecoratprsConsoleApp
             sw.Stop();
 
             SystemFeatureToggleCommand toggleCommand = new SystemFeatureToggleCommand(nameof(ICommand), typeof(PerfMonitorHandler<ICommand>), false);
-            Bus.Instance.ExecuteSystemCommand(toggleCommand);
+            //Bus.Instance.ExecuteSystemCommand(toggleCommand);
 
             Console.WriteLine($"Time <<=>> {sw.ElapsedMilliseconds}");
 

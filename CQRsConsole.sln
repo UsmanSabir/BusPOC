@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28124.53
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28407.52
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CQRsConsole", "CQRsConsole\CQRsConsole.csproj", "{4BBDE76B-44BD-4E04-A6A5-C8391BC927A7}"
 EndProject
@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DynamicDecoratprsConsoleApp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BusLib", "BusLib\BusLib.csproj", "{10D4B0C0-F122-432B-9D79-9BBE637D6CDE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BusImpl", "..\BusImpl\BusImpl.csproj", "{FD7DA289-9446-4B0D-AAF5-76F42D6F5F58}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BusImpl", "BusImpl\BusImpl.csproj", "{FD7DA289-9446-4B0D-AAF5-76F42D6F5F58}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

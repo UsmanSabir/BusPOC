@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using BusLib.Core;
 using BusLib.Infrastructure;
+using BusLib.Serializers;
 
 namespace BusLib.BatchEngineCore
 {
@@ -17,6 +18,8 @@ namespace BusLib.BatchEngineCore
             WritableProcessState = processState;
             Configuration = configuration;
             _storage = storage;
+            Criteria =
+                SerializersFactory.Instance.DefaultSerializer.DeserializeFromString<JobCriteria>(processState.Criteria);
         }
 
         public IReadWritableProcessState WritableProcessState
@@ -27,6 +30,8 @@ namespace BusLib.BatchEngineCore
         public ILogger Logger { get; }
         public IDashboardService DashboardService { get; }
         public IProcessState ProcessState => WritableProcessState;
+        public DateTime ProcessingDate => ProcessState.ProcessingDate;
+        public JobCriteria Criteria { get; }
 
         //private IProcessConfiguration _configuration;
         public IProcessConfiguration Configuration

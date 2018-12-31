@@ -13,15 +13,17 @@ namespace BusLib.BatchEngineCore.WatchDog
     {
         private readonly ILogger _logger;
         private readonly IStateManager _stateManager;
+        private readonly IEventAggregator _eventAggregator;
         private readonly IDistributedMessagePublisher _publisher;
         private readonly ISerializer _serializer;
         private readonly IDistributedMessageSubscriber _subscriber;
         private readonly TinyMessageSubscriptionToken _healthSub;
 
-        public PubSubWatchDog(ILogger logger, IStateManager stateManager, IPubSubFactory publisherFactory, CancellationToken cancellationToken)
+        public PubSubWatchDog(ILogger logger, IStateManager stateManager, IPubSubFactory publisherFactory, CancellationToken cancellationToken, IEventAggregator eventAggregator)
         {
             _logger = logger;
             _stateManager = stateManager;
+            _eventAggregator = eventAggregator;
             _publisher = publisherFactory.GetPublisher(cancellationToken, logger, nameof(IWatchDogMessage));
             _subscriber = publisherFactory.GetSubscriber(cancellationToken, logger, nameof(IWatchDogMessage));
 
@@ -29,7 +31,7 @@ namespace BusLib.BatchEngineCore.WatchDog
 
             _subscriber.Subscribe(nameof(ProcessRemovedWatchDogMessage), ProcessRemovedFromMaster);
             _subscriber.Subscribe(nameof(TriggerProducerWatchDogMessage), ProcessVolumeChangedFromMaster);
-            _healthSub = Bus.Instance.EventAggregator.Subscribe4Broadcast<HealthMessage>(PublishHealth);
+            _healthSub = _eventAggregator.Subscribe4Broadcast<HealthMessage>(PublishHealth);
         }
 
         private void PublishHealth(HealthMessage health)
@@ -49,13 +51,13 @@ namespace BusLib.BatchEngineCore.WatchDog
         private void ProcessRemovedFromMaster(string msg)
         {
             var message = _serializer.DeserializeFromString<ProcessRemovedWatchDogMessage>(msg);
-            Bus.Instance.EventAggregator.Publish(this, Constants.EventProcessFinished, message.ProcessId.ToString());
+            _eventAggregator.Publish(this, Constants.EventProcessFinished, message.ProcessId.ToString());
         }
 
         private void ProcessVolumeChangedFromMaster(string msg)
         {
             var message = _serializer.DeserializeFromString<TriggerProducerWatchDogMessage>(msg);
-            Bus.Instance.EventAggregator.Publish(this, Constants.EventProcessVolumeGenerated, message.ProcessId);
+            _eventAggregator.Publish(this, Constants.EventProcessVolumeGenerated, message.ProcessId);
         }
 
         string SerializeMessage<T>(T message)
@@ -88,7 +90,7 @@ namespace BusLib.BatchEngineCore.WatchDog
 
         protected override void Dispose(bool disposing)
         {
-            Bus.Instance.EventAggregator.Unsubscribe(_healthSub);
+            _eventAggregator.Unsubscribe(_healthSub);
             Robustness.Instance.SafeCall(()=> _subscriber?.Dispose());
             Robustness.Instance.SafeCall(()=>_publisher?.Dispose());
 

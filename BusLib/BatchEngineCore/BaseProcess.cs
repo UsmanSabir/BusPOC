@@ -100,11 +100,11 @@ namespace BusLib.BatchEngineCore
         //    throw new NotImplementedException();
         //}
 
-        void ITask.Handle(TaskContext taskContext, ISerializer serializer)
+        void ITask.Handle(TaskContext taskContext, ISerializer serializer, IStateManager stateManager)
         {
             var item = serializer.DeserializeFromString<T>(taskContext.State.Payload);
             taskContext.Logger.Info("Task started");
-            taskContext.MarkTaskStarted();
+            taskContext.MarkTaskStarted(stateManager);
 
             Execute(item, taskContext);
         }
@@ -182,7 +182,7 @@ namespace BusLib.BatchEngineCore
         //    Started(item, context);
         //}
 
-        void ITask.Handle(TaskContext taskContext, ISerializer serializer)
+        void ITask.Handle(TaskContext taskContext, ISerializer serializer, IStateManager stateManager)
         {
             var item = serializer.DeserializeFromString<T>(taskContext.State.Payload);
             //var state = taskContext.State.CurrentState;
@@ -208,7 +208,7 @@ namespace BusLib.BatchEngineCore
                 if (isFirst)
                 {
                     taskContext.Logger.Info("Task started");
-                    taskContext.MarkTaskStarted();
+                    taskContext.MarkTaskStarted(stateManager);
                 }
 
                 taskContext.Logger.Trace($"State '{state}' execution started");
@@ -230,14 +230,14 @@ namespace BusLib.BatchEngineCore
 
                 if (string.IsNullOrWhiteSpace(state) || state == taskContext.State.CurrentState)
                 {
-                    taskContext.PreserveNextState(state, Constants.ReasonCompleted);
+                    taskContext.PreserveNextState(state, stateManager, Constants.ReasonCompleted);
                     //taskContext.MarkTaskStatus(CompletionStatus.Finished, ResultStatus.Success, Constants.ReasonCompleted);
                     Robustness.Instance.SafeCall(()=>Completed(item, taskContext), taskContext.Logger,"Error in Completed action. {0}");
 
                     return;
                 }
 
-                taskContext.PreserveNextState(state);
+                taskContext.PreserveNextState(state, stateManager);
 
                 //if (!_sagaStateDictionary.TryGetValue(state, out var nextAction) || nextAction == null)
                 //{

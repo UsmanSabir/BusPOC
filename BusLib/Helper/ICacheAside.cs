@@ -37,14 +37,16 @@ namespace BusLib.Helper
         private readonly IProcessDataStorage _storage;
         private readonly IEventAggregator _eventAggregator;
         private readonly ILogger _logger;
+        private readonly IBatchLoggerFactory _batchLoggerFactory;
         private TinyMessageSubscriptionToken _subRem;
 
-        public CacheAside(IStateManager stateManager, IProcessDataStorage storage, IEventAggregator eventAggregator, ILogger logger)
+        public CacheAside(IStateManager stateManager, IProcessDataStorage storage, IEventAggregator eventAggregator, ILogger logger, IBatchLoggerFactory batchLoggerFactory)
         {
             _stateManager = stateManager;
             _storage = storage;
             _eventAggregator = eventAggregator;
             _logger = logger;
+            _batchLoggerFactory = batchLoggerFactory;
             _subRem =  eventAggregator.Subscribe<TextMessage>(ProcessRemoved, Constants.EventProcessFinished);
 
         }
@@ -77,7 +79,7 @@ namespace BusLib.Helper
                 }
 
                 var config = GetProcessConfiguration(process.ProcessKey);
-                var executionContext = new ProcessExecutionContext(LoggerFactory.GetProcessLogger(processId, process.ProcessKey), process, config, _storage);
+                var executionContext = new ProcessExecutionContext(_batchLoggerFactory.GetProcessLogger(processId, process.ProcessKey, process.CorrelationId), process, config, _storage);
                 return executionContext;
             });
 

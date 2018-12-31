@@ -14,15 +14,25 @@ namespace BusLib.BatchEngineCore
     internal class TaskProducerWorker:RepeatingTriggeringProcess
     {
         private readonly IVolumeHandler _volumeHandler;
+        private readonly IResolver _resolver;
+        private readonly IBatchLoggerFactory _batchLoggerFactory;
         private readonly ICacheAside _cacheAside;
         private TinyMessageSubscriptionToken _retrySub;
         private TinyMessageSubscriptionToken _volumeSub;
         private TinyMessageSubscriptionToken _healthSub;
 
-        public TaskProducerWorker(ILogger logger, ICacheAside cacheAside, IVolumeHandler volumeHandler) : base("TaskProducer", logger)
+        public TaskProducerWorker(ILogger logger, ICacheAside cacheAside, IVolumeHandler volumeHandler, IResolver resolver, IBatchLoggerFactory batchLoggerFactory) : base("TaskProducer", logger)
         {
             _cacheAside = cacheAside;
             _volumeHandler = volumeHandler;
+            _resolver = resolver;
+            _batchLoggerFactory = batchLoggerFactory;
+        }
+
+        private Bus _bus;
+        private Bus Bus
+        {
+            get { return _bus ?? (_bus = _resolver.Resolve<Bus>()); }
         }
 
         private void Run()
@@ -45,13 +55,13 @@ namespace BusLib.BatchEngineCore
                     }
 
                     var processKey = processExecutionContext.ProcessState.ProcessKey;
-                    var logger = LoggerFactory.GetTaskLogger(taskItem.Id, taskItem.ProcessId, processExecutionContext.ProcessState.CorrelationId);
+                    var logger = _batchLoggerFactory.GetTaskLogger(taskItem.Id, taskItem.ProcessId, processExecutionContext.ProcessState.CorrelationId);
                     TaskMessage taskMessage = new TaskMessage(taskItem, transaction, new SafeDisposableActions(transactionWrapper.Rollback), logger);
                     taskMessage.ProcessContext = processExecutionContext;
 
                     logger.Info($"Task picked at Node {NodeSettings.Instance.Name}");
 
-                    Bus.Instance.HandleTaskMessage(taskMessage);
+                    Bus.HandleTaskMessage(taskMessage);
                 }
                 catch (Exception e)
                 {
@@ -75,10 +85,10 @@ namespace BusLib.BatchEngineCore
         {
             base.OnStart();
 
-            _volumeSub = Bus.Instance.EventAggregator.Subscribe<TextMessage>(VolumeGeneratedHandler, Constants.EventProcessVolumeGenerated);
-            _retrySub = Bus.Instance.EventAggregator.Subscribe<TextMessage>(ProcessRetryTasksHandler, Constants.EventProcessRetry);
+            _volumeSub = Bus.EventAggregator.Subscribe<TextMessage>(VolumeGeneratedHandler, Constants.EventProcessVolumeGenerated);
+            _retrySub = Bus.EventAggregator.Subscribe<TextMessage>(ProcessRetryTasksHandler, Constants.EventProcessRetry);
 
-            this._healthSub = Bus.Instance.EventAggregator.Subscribe4Broadcast<HealthMessage>(PublishHealth);
+            this._healthSub = Bus.EventAggregator.Subscribe4Broadcast<HealthMessage>(PublishHealth);
         }
 
         private void PublishHealth(HealthMessage health)
@@ -98,9 +108,9 @@ namespace BusLib.BatchEngineCore
         protected override void OnStopping()
         {
             base.OnStopping();
-            Bus.Instance.EventAggregator.Unsubscribe(_healthSub);
-            Bus.Instance.EventAggregator.Unsubscribe(_volumeSub);
-            Bus.Instance.EventAggregator.Unsubscribe(_retrySub);
+            Bus.EventAggregator.Unsubscribe(_healthSub);
+            Bus.EventAggregator.Unsubscribe(_volumeSub);
+            Bus.EventAggregator.Unsubscribe(_retrySub);
             
             _volumeSub = _retrySub = null;
         }

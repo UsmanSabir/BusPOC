@@ -14,7 +14,7 @@ namespace BusLib.BatchEngineCore.Groups
             
         }
 
-        public GroupMessage(GroupActions action, IReadWritableGroupEntity entity, List<ProcessExecutionCriteria> criteria, string message=null)
+        public GroupMessage(GroupActions action, IReadWritableGroupEntity entity, List<JobCriteria> criteria, string message=null)
         {
             Action = action;
             Group = entity;
@@ -23,7 +23,7 @@ namespace BusLib.BatchEngineCore.Groups
             GroupId = entity.Id;
         }
 
-        public GroupMessage(GroupActions action, IReadWritableGroupEntity entity, List<ProcessExecutionCriteria> criteria, List<int> processKeys)
+        public GroupMessage(GroupActions action, IReadWritableGroupEntity entity, List<JobCriteria> criteria, List<int> processKeys)
         {
             Action = action;
             Group = entity;
@@ -57,7 +57,7 @@ namespace BusLib.BatchEngineCore.Groups
 
         public string Message { get; set; }
 
-        public List<ProcessExecutionCriteria> Criteria { get; set; }
+        public List<JobCriteria> Criteria { get; set; }
 
         [XmlIgnore]
         public object Sender { get; set; }
