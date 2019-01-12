@@ -1,4 +1,5 @@
 ﻿using System;
+using BusLib.BatchEngineCore;
 using BusLib.BatchEngineCore.PubSub;
 using BusLib.BatchEngineCore.Volume;
 
@@ -7,6 +8,9 @@ namespace BusLib.Core.Events
     //https://csharpvault.com/weak-event-pattern/
     public interface IEventAggregator
     {
+        void Publish<T>(T parameter) where T : class, ITinyMessage;
+        TinyMessageSubscriptionToken Subscribe<T>(Action<T> action) where T : class, ITinyMessage;
+        
         void Publish(object sender, string @event, string parameter = null);
         void PublishAsync(object sender, string @event, string parameter = null);
 
@@ -21,6 +25,16 @@ namespace BusLib.Core.Events
 
     class TinyEventAggregator:IEventAggregator
     {
+        public void Publish<T>(T message) where T : class, ITinyMessage
+        {
+            TinyMessengerHub.Instance.Publish(message);
+        }
+
+        public TinyMessageSubscriptionToken Subscribe<T>(Action<T> action) where T : class, ITinyMessage
+        {
+            return TinyMessengerHub.Instance.Subscribe<T>(action);
+        }
+
         public void Publish(object sender, string @event, string parameter = null)
         {
             TinyMessengerHub.Instance.Publish(new TextMessage(sender, @event, parameter));
@@ -71,6 +85,14 @@ namespace BusLib.Core.Events
         }
 
         public string Parameter { get; }
+    }
+
+    internal class VolumeErrorMessage : GenericTinyMessage<ProcessExecutionContext>
+    {
+        public VolumeErrorMessage(object sender, ProcessExecutionContext content) : base(sender, content)
+        {
+            
+        }
     }
 
 

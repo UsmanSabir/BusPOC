@@ -17,9 +17,11 @@ namespace BusLib.BatchEngineCore
         private readonly IResolver _resolver;
         private readonly IBatchLoggerFactory _batchLoggerFactory;
         private readonly ICacheAside _cacheAside;
+        private Bus _bus;
         private TinyMessageSubscriptionToken _retrySub;
         private TinyMessageSubscriptionToken _volumeSub;
         private TinyMessageSubscriptionToken _healthSub;
+        private TinyMessageSubscriptionToken _producerSub;
 
         public TaskProducerWorker(ILogger logger, ICacheAside cacheAside, IVolumeHandler volumeHandler, IResolver resolver, IBatchLoggerFactory batchLoggerFactory) : base("TaskProducer", logger)
         {
@@ -29,7 +31,7 @@ namespace BusLib.BatchEngineCore
             _batchLoggerFactory = batchLoggerFactory;
         }
 
-        private Bus _bus;
+        
         private Bus Bus
         {
             get { return _bus ?? (_bus = _resolver.Resolve<Bus>()); }
@@ -54,7 +56,7 @@ namespace BusLib.BatchEngineCore
                         continue;
                     }
 
-                    var processKey = processExecutionContext.ProcessState.ProcessKey;
+                    //var processKey = processExecutionContext.ProcessState.ProcessKey;
                     var logger = _batchLoggerFactory.GetTaskLogger(taskItem.Id, taskItem.ProcessId, processExecutionContext.ProcessState.CorrelationId);
                     TaskMessage taskMessage = new TaskMessage(taskItem, transaction, new SafeDisposableActions(transactionWrapper.Rollback), logger);
                     taskMessage.ProcessContext = processExecutionContext;
@@ -87,7 +89,8 @@ namespace BusLib.BatchEngineCore
 
             _volumeSub = Bus.EventAggregator.Subscribe<TextMessage>(VolumeGeneratedHandler, Constants.EventProcessVolumeGenerated);
             _retrySub = Bus.EventAggregator.Subscribe<TextMessage>(ProcessRetryTasksHandler, Constants.EventProcessRetry);
-
+            _producerSub = Bus.EventAggregator.Subscribe<TextMessage>(InvokeProducerMessageHandler, Constants.EventInvokeProducer);
+            
             this._healthSub = Bus.EventAggregator.Subscribe4Broadcast<HealthMessage>(PublishHealth);
         }
 
@@ -111,8 +114,15 @@ namespace BusLib.BatchEngineCore
             Bus.EventAggregator.Unsubscribe(_healthSub);
             Bus.EventAggregator.Unsubscribe(_volumeSub);
             Bus.EventAggregator.Unsubscribe(_retrySub);
+            Bus.EventAggregator.Unsubscribe(_producerSub);
             
             _volumeSub = _retrySub = null;
+        }
+
+        private void InvokeProducerMessageHandler(TextMessage msg)
+        {
+            Logger.Trace($"{nameof(TaskProducerWorker)} Received InvokeProducerMessage for processId {msg.Parameter ?? string.Empty}");
+            Trigger();
         }
 
         private void ProcessRetryTasksHandler(TextMessage msg)

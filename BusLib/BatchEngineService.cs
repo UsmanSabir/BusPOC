@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BusLib.BatchEngineCore;
 using BusLib.BatchEngineCore.Groups;
 using BusLib.Core;
+using BusLib.JobSchedular;
 using BusLib.Serializers;
 
 namespace BusLib
@@ -13,12 +14,14 @@ namespace BusLib
         private readonly ISerializersFactory _serializersFactory = SerializersFactory.Instance;
         private readonly IEntityFactory _entityFactory;
         private readonly Bus _bus;
+        //private IJobScheduler _jobScheduler;
 
-        public BatchEngineService(IStateManager stateManager, IEntityFactory entityFactory, Bus bus)
+        public BatchEngineService(IStateManager stateManager, IEntityFactory entityFactory, Bus bus) //, IJobScheduler jobScheduler)
         {
             _stateManager = stateManager;
             _entityFactory = entityFactory;
             _bus = bus;
+            //_jobScheduler = jobScheduler;
         }
 
         public void Start()
@@ -39,14 +42,14 @@ namespace BusLib
 
         public void SubmitGroup(int groupKey, List<JobCriteria> criteria, bool isManual, string triggeredBy)
         {
-            var entity = CreateGroupEntity(groupKey, criteria, isManual, triggeredBy);
+            var entity = CreateGroupEntity(groupKey, criteria, isManual, triggeredBy, null);
 
             _bus.HandleWatchDogMessage(new GroupMessage(GroupActions.Start, entity, criteria));
         }
 
         public void SubmitProcess(List<int> processKeys, List<JobCriteria> criteria, bool isManual, string triggeredBy)
         {
-            var entity = CreateGroupEntity(0, criteria, isManual, triggeredBy);
+            var entity = CreateGroupEntity(0, criteria, isManual, triggeredBy, processKeys);
 
             _bus.HandleWatchDogMessage(new GroupMessage(GroupActions.Start, entity, criteria, processKeys));
         }
@@ -56,7 +59,8 @@ namespace BusLib
             SubmitProcess(new List<int>(){processKey}, new List<JobCriteria>(){criteria}, isManual, triggeredBy);
         }
 
-        private IReadWritableGroupEntity CreateGroupEntity(int key, List<JobCriteria> criteria, bool isManual, string triggeredBy)
+        private IReadWritableGroupEntity CreateGroupEntity(int key, List<JobCriteria> criteria, bool isManual,
+            string triggeredBy, List<int> processKeys)
         {
             var serializer = _serializersFactory.GetSerializer<JobCriteria>();
             var crit = serializer.SerializeToString(criteria);
@@ -72,7 +76,7 @@ namespace BusLib
             entityW.IsResubmission = false;
             entityW.SubmittedBy = triggeredBy;
             entityW.State = CompletionStatus.Pending.Name;
-
+            if (processKeys != null) entityW.Payload = serializer.SerializeToString(processKeys);
             //IGroupEntity g = entity;
 
             var  entity2 = _stateManager.CreateGroupEntity(entity);

@@ -17,4 +17,20 @@ namespace BusLib.BatchEngineCore
         //void Execute(T item, TU context);
     }
 
+    public interface ITaskListener
+    {
+        void BeforeExecute(ITaskContext taskContext);
+
+        void AfterExecute(ITaskContext taskContext);
+
+        string Name { get;}
+    }
+
+    internal interface ITaskListenerHandler 
+    {
+        void InvokeBeforeExecute(ITaskContext taskContext);
+
+        void InvokeAfterExecute(ITaskContext taskContext);
+
+    }
 }

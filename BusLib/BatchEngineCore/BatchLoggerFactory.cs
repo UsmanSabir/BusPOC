@@ -29,22 +29,26 @@ namespace BusLib.BatchEngineCore
 
         public IFrameworkLogger GetSystemLogger()
         {
-            return new FrameworkLogger(CreateLogger("System"));
+            // return new FrameworkLogger(CreateLogger("System")); 
+            return new FrameworkLogger(new CorrelationStringLogger("System", CreateLogger("System")));// 
         }
 
         public ILogger GetTaskLogger(long taskId, long processId, Guid correlationId)
         {
-            return new PrependedLogger(CreateLogger(), $"TaskId {taskId}, ProcessId {processId}, correlationId {correlationId} =>");
+            return new CorrelationLogger(correlationId, CreateLogger());
+            //, $"TaskId {taskId}, ProcessId {processId}, correlationId {correlationId} =>");
         }
 
         public ILogger GetGroupLogger(long groupId, int groupKey)
         {
-            return new PrependedLogger(CreateLogger(), $"GroupId {groupId}, GroupKey {groupKey} =>");
+            //return new PrependedLogger(CreateLogger(), $"GroupId {groupId}, GroupKey {groupKey} =>");
+            return new CorrelationStringLogger(groupId.ToString(), CreateLogger());
         }
 
         public ILogger GetProcessLogger(long processId, long processKey, Guid correlationId)
         {
-            return new PrependedLogger(CreateLogger(), $"ProcessId {processId}, ProcessKey {processKey}, correlationId {correlationId}  =>");
+            //return new PrependedLogger(CreateLogger(), $"ProcessId {processId}, ProcessKey {processKey}, correlationId {correlationId}  =>");
+            return new CorrelationLogger(correlationId, CreateLogger());
         }
 
         public ILogger CreateLogger(string name = null)
@@ -60,6 +64,11 @@ namespace BusLib.BatchEngineCore
         public FrameworkLogger(ILogger frameworkLoggerImplementation)
         {
             _frameworkLoggerImplementation = frameworkLoggerImplementation;
+        }
+
+        public void Debug(string msg)
+        {
+            Console.WriteLine(msg);
         }
 
         public void Trace(string message, params object[] args)
@@ -128,6 +137,11 @@ namespace BusLib.BatchEngineCore
         public void Warn(string message, Exception e)
         {
             Console.WriteLine(message + e.ToString());
+        }
+
+        public void Debug(string msg)
+        {
+            Console.WriteLine(msg);
         }
 
         public void Trace(string message, params object[] args)

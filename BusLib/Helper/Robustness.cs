@@ -85,7 +85,7 @@ namespace BusLib.Helper
             }
         }
 
-        public void ExecuteUntilTrue(Action action, CancellationToken token)
+        public void ExecuteUntilTrue(Action action, CancellationToken token, ILogger logger=null)
         {
             do
             {
@@ -94,10 +94,13 @@ namespace BusLib.Helper
                     action?.Invoke();
                     return;
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     if (!token.IsCancellationRequested)
+                    {
+                        logger?.Warn("Error occured in robust call {error}", ex);
                         SleepBackOffMultiplier(3);
+                    }
                 }
             } while (!token.IsCancellationRequested);
         }

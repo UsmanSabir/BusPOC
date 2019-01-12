@@ -1,24 +1,37 @@
 ﻿using BusLib.BatchEngineCore;
 
+
 namespace BusImpl
 {
-    public class TransactionWrapper : ITransaction
+    public class TransactionWrapper:ITransaction
     {
-        public object TransactionObject => throw new System.NotImplementedException();
+        private readonly ITransaction _unitOfWork;
 
-        public void Commit()
+        public TransactionWrapper()
         {
-            throw new System.NotImplementedException();
+            //_unitOfWork = unitOfWork;
         }
 
         public void Dispose()
         {
-            throw new System.NotImplementedException();
+            _unitOfWork?.Dispose();
+        }
+
+        public void Commit()
+        {
+            _unitOfWork?.Commit();
         }
 
         public void Rollback()
         {
-            throw new System.NotImplementedException();
+            _unitOfWork?.Dispose();
         }
+
+        public bool IsOpen()
+        {
+            return _unitOfWork?.IsOpen() ?? false;
+        }
+
+        public object TransactionObject => _unitOfWork;
     }
 }

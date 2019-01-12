@@ -1,4 +1,5 @@
 ﻿using System;
+using BusLib.Helper;
 
 namespace BusLib.BatchEngineCore
 {
@@ -8,6 +9,7 @@ namespace BusLib.BatchEngineCore
 
         void Rollback();
 
+        bool IsOpen(); //check if connection is open
         object TransactionObject { get; }
     }
 
@@ -39,6 +41,14 @@ namespace BusLib.BatchEngineCore
             }
         }
 
+        public bool IsOpen()
+        {
+            lock (this)
+            {
+                return _transaction?.IsOpen()??false;
+            }
+        }
+
         public object TransactionObject
         {
             get
@@ -53,8 +63,11 @@ namespace BusLib.BatchEngineCore
 
         public void Dispose()
         {
-            _transaction?.Dispose();
-            _transaction = null;
+            Robustness.Instance.SafeCall(() =>
+            {
+                _transaction?.Dispose();
+                _transaction = null;
+            });
         }
     }
 }

@@ -27,8 +27,12 @@ namespace BusLib.BatchEngineCore
 
         int DeferredCount { get; }
 
+        bool IsRetry { get; }
+
         //void MarkStatus(TaskStatus status, ResultStatus result, string reason); //todo hide from implementation, maybe extension method
         bool SetNextState(string next);
+
+        void SetResult(ResultStatus result);
     }
 
     //public interface ITaskContext<out T> : ITaskContext

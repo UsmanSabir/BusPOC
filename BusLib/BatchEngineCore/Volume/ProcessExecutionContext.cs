@@ -1,23 +1,28 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using BusLib.BatchEngineCore.Groups;
 using BusLib.Core;
 using BusLib.Infrastructure;
 using BusLib.Serializers;
 
 namespace BusLib.BatchEngineCore
 {
-    class ProcessExecutionContext: IProcessExecutionContext
+    class ProcessExecutionContext: IProcessExecutionContextWithVolume
     {
         private readonly IProcessDataStorage _storage;
         readonly ConcurrentDictionary<string,object> _tempData=new ConcurrentDictionary<string, object>();
+        private bool _hasVolume = false;
 
-        public ProcessExecutionContext(ILogger logger, IReadWritableProcessState processState, IProcessConfiguration configuration, IProcessDataStorage storage)
+        public ProcessExecutionContext(ILogger logger, IReadWritableProcessState processState,
+            IProcessConfiguration configuration, IProcessDataStorage storage,
+            IReadWritableGroupEntity groupDetailsGroupEntity)
         {
             Logger = logger;
             //ProcessState = processState;
             WritableProcessState = processState;
             Configuration = configuration;
             _storage = storage;
+            GroupEntity = groupDetailsGroupEntity;
             Criteria =
                 SerializersFactory.Instance.DefaultSerializer.DeserializeFromString<JobCriteria>(processState.Criteria);
         }
@@ -25,6 +30,7 @@ namespace BusLib.BatchEngineCore
         public IReadWritableProcessState WritableProcessState
         {
             get;
+            private set;
         }
 
         public ILogger Logger { get; }
@@ -38,7 +44,14 @@ namespace BusLib.BatchEngineCore
         {
             get;// { return _configuration ?? (_configuration = GetProcessConfiguration()); }
         }
-        
+
+        internal bool HasVolume
+        {
+            get { return _hasVolume || ProcessState.HasVolume; }
+        }
+
+        public IReadWritableGroupEntity GroupEntity { get; }
+
         public bool AddUpdateProcessData<T>(string key, T value)
         {
             _storage.AddOrUpdateProcessData(ProcessState.Id, key, value);
@@ -74,6 +87,16 @@ namespace BusLib.BatchEngineCore
         public object GetTempData(string key)
         {
             return GetTempData<object>(key);
+        }
+
+        public void SetVolumeGenerated()
+        {
+            _hasVolume = true;
+        }
+
+        internal void UpdateProcessEntity(IReadWritableProcessState state)
+        {
+            WritableProcessState = state;
         }
     }
 }

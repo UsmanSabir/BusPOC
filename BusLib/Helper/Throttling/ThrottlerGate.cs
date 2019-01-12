@@ -89,7 +89,7 @@ namespace BusLib.Helper
                 timeUntilNextCheck = TimeUnitMilliseconds;
 
             // Set the timer.
-            _exitTimer.Change(timeUntilNextCheck, -1);
+            _exitTimer.Change(Math.Max(timeUntilNextCheck,-1), -1);
         }
 
         /// <summary>

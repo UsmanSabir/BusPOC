@@ -1,5 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.ExceptionServices;
+using System.Threading.Tasks;
+using BusLib.BatchEngineCore.Exceptions;
 using BusLib.BatchEngineCore.Groups;
 using BusLib.Core;
 using BusLib.Helper;
@@ -12,7 +16,7 @@ namespace BusLib.BatchEngineCore.StatePersistence
         private readonly IStateManager _stateManagerImplementation;
         private readonly ILogger _logger;
 
-        private IResolver _resolver;
+        private readonly IResolver _resolver;
         private Bus _bus;
 
         T Execute<T>(Func<T> func)
@@ -34,7 +38,27 @@ namespace BusLib.BatchEngineCore.StatePersistence
             {
                 Bus.HandleStateManagerCommand(action);
             }
-            catch (Exception e)
+            catch(TaskCanceledException)
+            {
+                _logger.Info($"StateManager command cancelled.");
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.Info($"StateManager command cancelled.");
+            }
+            catch (FrameworkException)
+            {
+                throw;//its ok
+            }
+            catch (AggregateException aex) when (aex.InnerExceptions.Any(r => r is FrameworkException))
+            {
+                var fex = aex.InnerExceptions.First(r => r is FrameworkException);
+                //if (fex != null)
+                {
+                    ExceptionDispatchInfo.Capture(fex).Throw();
+                }
+            }
+            catch (Exception e) when(!(e  is FrameworkException))
             {
                 _logger.Fatal($"Error executing state command. {e.Message}", e);
                 //todo shutdown
@@ -78,6 +102,11 @@ namespace BusLib.BatchEngineCore.StatePersistence
         public IEnumerable<ITaskState> GetIncompleteTasksForProcess(long processId)
         {
             return Execute(()=>_stateManagerImplementation.GetIncompleteTasksForProcess(processId));
+        }
+
+        public long GetIncompleteTasksCountForProcess(long processId)
+        {
+            return Execute(() => _stateManagerImplementation.GetIncompleteTasksCountForProcess(processId));
         }
 
         public long CountFailedTasksForProcess<T>(long processId)
@@ -140,9 +169,9 @@ namespace BusLib.BatchEngineCore.StatePersistence
             Execute(() => _stateManagerImplementation.SaveTaskState(taskId, processId, key, val));
         }
 
-        public void UpdateTask(ITaskState task, ITransaction runningTransaction)
+        public void UpdateTask(ITaskState task, ITransaction runningTransaction, bool commit)
         {
-            Execute(() => _stateManagerImplementation.UpdateTask(task, runningTransaction));
+            Execute(() => _stateManagerImplementation.UpdateTask(task, runningTransaction, commit));
         }
 
         public int MarkProcessForRetry(IReadWritableProcessState process)
@@ -158,6 +187,11 @@ namespace BusLib.BatchEngineCore.StatePersistence
         public bool IsHealthy()
         {
             return _stateManagerImplementation.IsHealthy();
+        }
+
+        public IEnumerable<IReadWritableProcessState> GetIncompleteProcesses()
+        {
+            return Execute(() => _stateManagerImplementation.GetIncompleteProcesses());
         }
     }
 }

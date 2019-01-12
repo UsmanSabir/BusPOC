@@ -29,7 +29,17 @@ namespace BusLib.BatchEngineCore.Handlers
 
         public void Handle(TaskMessage message)
         {
-            _taskExecutorsPool.Get(message.TaskState.ProcessId, message.ProcessContext.ProcessState.ProcessKey, message.ProcessContext.ProcessState.GroupId).Add(message);
+            try
+            {
+                _taskExecutorsPool
+                    .Get(message.TaskState.ProcessId, message.ProcessContext.ProcessState.ProcessId, message.ProcessContext.ProcessState.GroupId)
+                    .Add(message);
+            }
+            catch (Exception e)
+            {
+                message.Logger.Warn("Error while adding task to consumer {error}", e);
+                message.Transaction?.Dispose();
+            }
         }
 
         public void Dispose()
@@ -64,6 +74,7 @@ namespace BusLib.BatchEngineCore.Handlers
         private readonly long _groupId;
         private readonly IStateManager _stateManager;
         private readonly IProcessExecutionContext _processContext;
+        private readonly ITaskListenerHandler _taskListener;
 
         DateTime _lastInputTime;
         private long _tasksReceivedCount = 0;
@@ -73,12 +84,15 @@ namespace BusLib.BatchEngineCore.Handlers
         public ProcessConsumer(CancellationToken parentToken, int processKey, long processId,
             long groupId,
             IStateManager stateManager,
-            ILogger logger, ICacheAside cacheAside, ITask taskHandler, ISerializer serializer, Bus bus, IFrameworkLogger frameworkLogger) //, ProcessConfiguration processConfiguration
+            ILogger logger, ITask taskHandler, ISerializer serializer, Bus bus,
+            IFrameworkLogger frameworkLogger, ITaskListenerHandler taskListener,
+            IProcessExecutionContext executionContext) //, ICacheAside cacheAside //, ProcessConfiguration processConfiguration
         {
             _systemLogger = frameworkLogger;
-            _cacheAside = cacheAside;
-
-            _processContext = cacheAside.GetProcessExecutionContext(processId);
+            _taskListener = taskListener;
+            //_cacheAside = cacheAside;
+            
+            _processContext = executionContext; //cacheAside.GetProcessExecutionContext(processId);
             _processConfiguration = _processContext.Configuration;
 
             _lastInputTime = DateTime.UtcNow;
@@ -282,7 +296,7 @@ namespace BusLib.BatchEngineCore.Handlers
                 var mdt = lastInp.AddMilliseconds(_processNotificationThresholdMilliSec);
                 if (mdt < DateTime.UtcNow)
                 {
-                    IProcessInputIdleWatchDogMessage message =new ProcessInputIdleWatchDogMessage(_processContext.ProcessState.GroupId, _processContext.ProcessState.Id, _processContext.ProcessState.ProcessKey, this);
+                    IProcessInputIdleWatchDogMessage message =new ProcessInputIdleWatchDogMessage(_processContext.ProcessState.GroupId, _processContext.ProcessState.Id, _processContext.ProcessState.ProcessId, this);
                 
                     Bus.HandleWatchDogMessage(message);
                 }
@@ -309,6 +323,7 @@ namespace BusLib.BatchEngineCore.Handlers
                 try
                 {
                     await Task.Delay(3000, pair.Value.TaskContext.CancellationToken);//wait for graceful shutdown
+                    //await Task.Delay(300, pair.Value.TaskContext.CancellationToken);//todo
                 }
                 catch (TaskCanceledException)
                 {
@@ -320,7 +335,17 @@ namespace BusLib.BatchEngineCore.Handlers
                     pair.Value.TaskContext.Logger.Error("Task timeout");
                     pair.Value.TaskContext.DashboardService?.LogError("Task timeout, sending abort command");
                     _logger.Warn("Task timeout, aborting thread");
-                    pair.Value.Thread?.Abort(); //just to be safe
+                    if (pair.Value.Thread?.ThreadState == ThreadState.WaitSleepJoin)
+                    {
+                        pair.Value.Thread?.Interrupt(); //todo check
+                    }
+                    //else
+                    {
+                        _logger.Warn($"ThreadKill id {pair.Value.Thread?.ManagedThreadId} for task {pair.Value.TaskContext.State.Id}");
+                        pair.Value.Thread?.Abort(); //just to be safe    
+                        pair.Value.Thread = null; //don't abort same task twice
+                    }
+                    
                 }
             }
         }
@@ -349,6 +374,11 @@ namespace BusLib.BatchEngineCore.Handlers
                     $"Timeout observer task canceled Process: {_processKey} by token {(_processToken.IsCancellationRequested ? "ProcessToken" : (_parentToken.IsCancellationRequested ? "ParentToken" : "NoToken"))} with msg {e.Message}";
                 _logger.Info(msg);
             }
+            catch (ThreadAbortException)
+            {
+                _logger.Error($"Timeout observer got ThreadAbort exception with message");
+                Thread.ResetAbort();
+            }
             catch (Exception e)
             {
                 _logger.Error($"Timeout observer got unexpected error with message {e.Message}", e);
@@ -369,10 +399,11 @@ namespace BusLib.BatchEngineCore.Handlers
             try
             {
                 var res = Parallel.ForEach(_taskContextsQueue.GetConsumingPartitioner(),
-                    new ParallelOptions { CancellationToken = _processToken, MaxDegreeOfParallelism = _maxConsumers },
+                    new ParallelOptions {CancellationToken = _processToken, MaxDegreeOfParallelism = _maxConsumers},
                     ExecuteTask);
                 //_systemLogger.Trace($"Is ThreadPool Thread {Thread.CurrentThread.IsThreadPoolThread}");
-                _logger.Trace($"Consumer process {_processId} stopped gracefully with completion flag: {res.IsCompleted}");
+                _logger.Trace(
+                    $"Consumer process {_processId} stopped gracefully with completion flag: {res.IsCompleted}");
             }
             catch (TaskCanceledException e)
             {
@@ -392,6 +423,22 @@ namespace BusLib.BatchEngineCore.Handlers
                 _systemLogger.Warn(
                     $"Consumer got exception while processing Process: {_processKey} with message {e.InnerException?.Message ?? string.Empty}",
                     e);
+                //e.Handle(ex =>
+                foreach (var ex in e.InnerExceptions)
+                {
+                    if (ex is ThreadAbortException)
+                    {
+                      Robustness.Instance.SafeCall(Thread.ResetAbort);
+                    }
+                    //return true;
+                } //);
+
+            }
+            catch (ThreadAbortException)
+            {
+                _systemLogger.Warn(
+                    $"Consumer got ThreadAbortException while processing Process: {_processKey} with message");
+                Robustness.Instance.SafeCall(Thread.ResetAbort);
             }
             catch (Exception e)
             {
@@ -407,8 +454,8 @@ namespace BusLib.BatchEngineCore.Handlers
         {
             _logger.Trace($"Is ThreadPool Threaed {Thread.CurrentThread.IsThreadPoolThread}");
 
-            TaskInProcess taskInProcess;
-            
+            TaskInProcess taskInProcess=null;
+
             try
             {
                 if (Thread.CurrentThread.Name == null)
@@ -417,23 +464,61 @@ namespace BusLib.BatchEngineCore.Handlers
                 }
 
                 var taskCancellationTknSrc = CancellationTokenSource.CreateLinkedTokenSource(_processToken);
-                
+
                 taskInProcess = new TaskInProcess
-                    { StartTime = DateTime.UtcNow, Thread = Thread.CurrentThread, TaskContext = task, CancellationTokenSource = taskCancellationTknSrc };
+                {
+                    StartTime = DateTime.UtcNow,
+                    Thread = Thread.CurrentThread,
+                    TaskContext = task,
+                    CancellationTokenSource = taskCancellationTknSrc
+                };
 
-                _inProcessTasks.TryAdd(task.State.Id, taskInProcess);
+                if (!_inProcessTasks.TryAdd(task.State.Id, taskInProcess))
+                {
+                    _logger.Warn($"{task.State.Id} already in running pool");
+                }
 
-                ExecuteWithRetryAsync(task).Wait();
+                _logger.Info($"Thread id {taskInProcess.Thread.ManagedThreadId} for task {task.State.Id}");
+
+                ExecuteWithRetry(task);
 
                 taskInProcess.Thread = null;
                 _inProcessTasks.TryRemove(task.State.Id, out taskInProcess); //exclude from timeout check
 
-                if(!task.IsDeferred)
-                    task.MarkTaskStatus(CompletionStatus.Finished, task.Result ?? ResultStatus.Success, Constants.ReasonCompleted, _stateManager);
+                if (!task.IsDeferred)
+                {
+                    task.MarkTaskStatus(CompletionStatus.Finished, task.Result ?? ResultStatus.Success,
+                        Constants.ReasonCompleted, _stateManager);
+                }
+                else
+                {
+                    //if (_taskContextsQueue.Count == 0) // && _inProcessTasks.Count==0)
+                    {
+                        //let producer know there is new task in queue
+                        Bus.EventAggregator.PublishAsync(this, Constants.EventInvokeProducer, _processId.ToString());
+                    }
+                }
+
+            }
+            catch (FrameworkException fex)
+            {
+                if (taskInProcess != null)
+                {
+                    taskInProcess.Thread = null;
+                }
+                _inProcessTasks.TryRemove(task.State.Id, out taskInProcess); //exclude from timeout check
+
+                _logger.Warn("Framework exception while executing task {taskId} with message {error} and internal error {innerException}", task.State.Id, fex.Message, fex.InnerException);
             }
             catch (OperationCanceledException e) when (e.CancellationToken == _processToken ||
                                                        e.CancellationToken == _parentToken || e.CancellationToken == task.CancellationToken)
             {
+                if (taskInProcess != null)
+                {
+                    taskInProcess.Thread = null;
+                }
+                _inProcessTasks.TryRemove(task.State.Id, out taskInProcess); //exclude from timeout check
+
                 var msg =
                     $"Task canceled by token {(_processToken.IsCancellationRequested ? "ProcessToken" : (_parentToken.IsCancellationRequested ? "ParentToken" : "NoToken"))} with msg {e.Message}";
                 task.Logger.Info(msg);
@@ -441,22 +526,82 @@ namespace BusLib.BatchEngineCore.Handlers
             }
             catch (ThreadInterruptedException e)
             {
+                if (taskInProcess != null)
+                {
+                    taskInProcess.Thread = null;
+                }
+                _inProcessTasks.TryRemove(task.State.Id, out taskInProcess); //exclude from timeout check
+
                 task.Logger.Error("Task interrupted", e);
                 task.MarkTaskStatus(CompletionStatus.Finished, ResultStatus.Error, Constants.ReasonCancelled, _stateManager);
             }
             catch (ThreadAbortException e)
             {
+                if (taskInProcess != null)
+                {
+                    taskInProcess.Thread = null;
+                }
+                _inProcessTasks.TryRemove(task.State.Id, out taskInProcess); //exclude from timeout check
+
                 task.Logger.Error("Task aborted", e);
+                task.MarkTaskStatus(CompletionStatus.Finished, ResultStatus.Error, Constants.ReasonCancelled, _stateManager);
+
                 Thread.ResetAbort();
-                task.MarkTaskStatus(CompletionStatus.Finished, ResultStatus.Error, Constants.ReasonCancelled, _stateManager);                
             }
+            catch (AggregateException aex) when (aex.InnerExceptions.Any(r => r is FrameworkException))
+            {
+                if (taskInProcess != null)
+                {
+                    taskInProcess.Thread = null;
+                }
+                _inProcessTasks.TryRemove(task.State.Id, out taskInProcess); //exclude from timeout check
+
+                var fex = aex.InnerExceptions.First(r => r is FrameworkException);
+                _logger.Warn("Framework exception while executing task {taskId} with message {error} and internal error {innerException}", task.State.Id, fex.Message, fex.InnerException);
+            }
+            catch (AggregateException e)
+            {
+                if (taskInProcess != null)
+                {
+                    taskInProcess.Thread = null;
+                }
+                _inProcessTasks.TryRemove(task.State.Id, out taskInProcess); //exclude from timeout check
+
+                _logger.Warn("Aggregate exception while executing task {taskId} with message {error} and internal error {innerException}", task.State.Id, e.Message, e.InnerException);
+
+                var innerTask = task;
+                e.Handle(ex =>
+                {
+                    if (ex is ThreadAbortException)
+                    {
+                        innerTask.Logger.Error("Task aborted", e);
+                        innerTask.MarkTaskStatus(CompletionStatus.Finished, ResultStatus.Error, Constants.ReasonCancelled, _stateManager);
+
+                        Thread.ResetAbort();
+                    }
+                    return true;
+                });
+            }
+
             catch (Exception e)
             {
+                if (taskInProcess != null)
+                {
+                    taskInProcess.Thread = null;
+                }
+                _inProcessTasks.TryRemove(task.State.Id, out taskInProcess); //exclude from timeout check
+
                 task.Logger.Error($"Error executing task with message {e.Message}", e);
                 task.MarkTaskStatus(CompletionStatus.Finished, ResultStatus.Error, e.Message, _stateManager);
             }
             finally
             {
+                if (taskInProcess != null)
+                {
+                    taskInProcess.Thread = null;
+                }
+                _inProcessTasks.TryRemove(task.State.Id, out taskInProcess); //exclude from timeout check
+
                 task.Logger.Trace("Task removing from processing queue");
                 _inProcessTasks.TryRemove(task.State.Id, out taskInProcess);
                 bool isDeferred = task.IsDeferred;
@@ -467,7 +612,7 @@ namespace BusLib.BatchEngineCore.Handlers
             }
         }
 
-        private async Task ExecuteWithRetryAsync(TaskContext context)
+        private void ExecuteWithRetry(TaskContext context)
         {
             int currentRetry = 0;
             var maxRetries = ProcessConfiguration.TaskRetries ?? 0;
@@ -475,32 +620,70 @@ namespace BusLib.BatchEngineCore.Handlers
             {
                 try
                 {
+                    context.CancellationToken.ThrowIfCancellationRequested();
+
                     InvokeTaskHandler(context);
                     break;
                 }
-                catch (Exception ex) 
-                when (!(ex is ThreadAbortException) && !(ex is ThreadInterruptedException) && !(ex is OperationCanceledException)) //propogate cancel exceptions
-                {                    
-                    currentRetry++;
-                    //task.State.FailedCount //todo increment
-                    if (currentRetry > maxRetries || !IsTransient(context, ex))
+                catch (AggregateException eax)
+                    when (!eax.InnerExceptions.Any(ex=> ex is ThreadAbortException) 
+                          && !eax.InnerExceptions.Any(exi => (exi is ThreadInterruptedException)) &&
+                          !eax.InnerExceptions.Any(exc => (exc is OperationCanceledException)) &&
+                          !eax.InnerExceptions.Any(exf => (exf is FrameworkException))) //propogate cancel exceptions
+                {
+                    var rethrow = false;
+                    foreach (var exception in eax.InnerExceptions)
                     {
-                        throw;
+                        rethrow = rethrow || CanRethrhow(exception, ref currentRetry);
                     }
-                    context.Logger.Warn($"Task failed and going to retry {currentRetry} with error '{ex.Message}'", ex);
+                    eax.Handle(e => true);
+
+                    if (rethrow)
+                        throw;
 
                     var waitBeforeRetry = ProcessConfiguration.RetryDelayMilli ?? 100;
-                    ////Wait time increases exponentially
-                    //var expTime = Math.Pow(waitBeforeRetry, currentRetry);
-                    //waitBeforeRetry = (int)(expTime>int.MaxValue?int.MaxValue:expTime);
+                    Thread.Sleep(waitBeforeRetry); //todo any better?
 
-                    await Task.Delay(waitBeforeRetry , context.CancellationToken);
+                }
+                catch (Exception ex) 
+                when (!(ex is ThreadAbortException) && !(ex is ThreadInterruptedException) && !(ex is OperationCanceledException) && !(ex is FrameworkException)) //propogate cancel exceptions
+                {
+                    var rethrow = CanRethrhow(ex, ref currentRetry);
+
+                    if (rethrow)
+                        throw;
+
+                    var waitBeforeRetry = ProcessConfiguration.RetryDelayMilli ?? 100;
+                    Thread.Sleep(waitBeforeRetry); //todo any better?
+
+                                                   ////Wait time increases exponentially
+                                                   //var expTime = Math.Pow(waitBeforeRetry, currentRetry);
+                                                   //waitBeforeRetry = (int)(expTime>int.MaxValue?int.MaxValue:expTime);
+
+                    //Task.Delay(waitBeforeRetry, context.CancellationToken).Wait(context.CancellationToken);//_parentToken);
+
+                }
+
+                bool CanRethrhow(Exception ex, ref int currRetry)
+                {
+                    //currentRetry++;
+                    currRetry++;
+                    //task.State.FailedCount //todo increment
+                    if (currRetry > maxRetries || !IsTransient(context, ex))
+                    {
+                        return true;
+                    }
+
+                    context.Logger.Warn($"Task failed and going to retry {currentRetry} with error '{ex.Message}'", ex);
+                    return false;
                 }
             }
         }
 
         private void InvokeTaskHandler(TaskContext task)
         {
+            _taskListener?.InvokeBeforeExecute(task);
+
             if (_isStateful)
             {
                 HandleStatefulTaskRequest(task);
@@ -510,6 +693,7 @@ namespace BusLib.BatchEngineCore.Handlers
                 task.MarkTaskStarted(_stateManager);
                 _handler.Handle(task, _serializer, _stateManager);
             }
+            _taskListener?.InvokeAfterExecute(task);
         }
 
         private void HandleStatefulTaskRequest(TaskContext task)
@@ -565,12 +749,34 @@ namespace BusLib.BatchEngineCore.Handlers
         {
             Stop();
 
-            foreach (var taskContext in _taskContextsQueue)
+            Robustness.Instance.SafeCall(() =>
             {
-                taskContext?.Dispose();
-            }
+                foreach (var taskContext in _taskContextsQueue)
+                {
+                    taskContext?.Dispose();
+                }
+            });
+
             //_semaphore.Dispose();
-            _taskContextsQueue.Dispose();
+
+            Robustness.Instance.SafeCall(()=>
+            {
+                _taskContextsQueue.Dispose();
+            });
+
+            Robustness.Instance.SafeCall(() =>
+            {
+                foreach (var process in _inProcessTasks)
+                {
+                    Robustness.Instance.SafeCall(() =>
+                    {
+                        //process.Value.CancellationTokenSource.Cancel(); //process token cancelled
+                        if (process.Value.Thread?.IsAlive == true) process.Value.Thread?.Abort();
+                        process.Value.TaskContext.Dispose();
+                    });
+
+                }
+            });
 
             base.Dispose(disposing);
         }

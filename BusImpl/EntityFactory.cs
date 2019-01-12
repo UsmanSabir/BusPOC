@@ -1,18 +1,25 @@
-﻿using BusLib.BatchEngineCore;
+﻿using System;
+using BusLib.BatchEngineCore;
 using BusLib.BatchEngineCore.Groups;
 
 namespace BusImpl
 {
-    public class EntityFactory : IEntityFactory
+    public class EntityFactory: IEntityFactory
     {
+        
         public IReadWritableGroupEntity CreateGroupEntity()
         {
-            throw new System.NotImplementedException();
+            //BatchGroupStateWrapper wrapper=new BatchGroupStateWrapper(new BatchGroupState());
+            //return wrapper;
+            throw new NotImplementedException();
         }
 
         public IReadWritableProcessState CreateProcessEntity()
         {
-            throw new System.NotImplementedException();
+            IReadWritableProcessState wrapper = null;// new ProcessStateWrapper(new BatchProcessState());
+            wrapper.Status= CompletionStatus.Pending;
+            wrapper.Result= ResultStatus.Empty;
+            return wrapper;
         }
     }
 }

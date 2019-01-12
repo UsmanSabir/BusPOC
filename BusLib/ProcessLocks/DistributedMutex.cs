@@ -19,7 +19,7 @@ namespace BusLib.ProcessLocks
         protected readonly string Key;
         private readonly Func<CancellationToken, Task> _taskToRunWhenLockAcquired;
         private Action _secondaryAction;
-        private readonly IFrameworkLogger _logger;
+        protected readonly IFrameworkLogger Logger;
         private TaskCompletionSource<bool> _initializerCompletionSource;
 
         protected DistributedMutex(string key, Func<CancellationToken, Task> taskToRunWhenLockAcquired, Action secondaryAction, IFrameworkLogger logger)
@@ -27,7 +27,7 @@ namespace BusLib.ProcessLocks
             Key = key;
             _taskToRunWhenLockAcquired = taskToRunWhenLockAcquired;
             _secondaryAction = secondaryAction;
-            _logger = logger;
+            Logger = logger;
         }
 
         public Task RunTaskWhenMutexAcquired(CancellationToken token)
@@ -36,9 +36,22 @@ namespace BusLib.ProcessLocks
                 throw new FrameworkException("Mutex already initialized");
 
             _initializerCompletionSource = new TaskCompletionSource<bool>();
-            Task.Factory.StartNew(() =>
+            Task.Factory.StartNew(async () =>
                 {
-                    Robustness.Instance.SafeCall(async () => { await RunTaskWhenLockAcquired(token); }, _logger);
+                    //Robustness.Instance.SafeCall(() =>
+                    try
+                    {
+                        await RunTaskWhenLockAcquired(token); //.Wait(token);
+                    } //, _logger);
+                    catch (Exception e)
+                    {
+                        Logger.Error("Master node selector component crashed with error {error}", e);
+                        //todo what now
+                        if (Debugger.IsAttached)
+                        {
+                            Debugger.Break();
+                        }
+                    }
                 }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             return _initializerCompletionSource.Task;
         }
@@ -92,7 +105,7 @@ namespace BusLib.ProcessLocks
                     {
                         if (!(ex is OperationCanceledException))
                         {
-                            _logger.Error(ex.Message);
+                            Logger.Error(ex.Message);
                         }
 
                         return true;

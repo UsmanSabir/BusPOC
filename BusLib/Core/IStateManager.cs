@@ -28,6 +28,7 @@ namespace BusLib.Core
         //ITransaction BeginTransaction();
         //T Insert<T>(T process);
         IEnumerable<ITaskState> GetIncompleteTasksForProcess(long processId);
+        long GetIncompleteTasksCountForProcess(long processId);
         //IEnumerable<T> GetFailedTasksForProcess<T>(int processId);
         long CountFailedTasksForProcess<T>(long processId);
         long CountPendingTasksForProcess(long processId);
@@ -42,11 +43,12 @@ namespace BusLib.Core
         void SaveProcess(IProcessState process);
         void SaveTaskStates(long taskId, long processId, List<KeyValuePair<string, string>> states);
         void SaveTaskState(long taskId, long processId, string key, string val);
-        void UpdateTask(ITaskState task, ITransaction runningTransaction);
+        void UpdateTask(ITaskState task, ITransaction runningTransaction, bool commit=false);
         int MarkProcessForRetry(IReadWritableProcessState process);
         void MarkGroupStopped(IGroupEntity @group);
 
         bool IsHealthy();
+        IEnumerable<IReadWritableProcessState> GetIncompleteProcesses();
     }
 
     //to have wrapper

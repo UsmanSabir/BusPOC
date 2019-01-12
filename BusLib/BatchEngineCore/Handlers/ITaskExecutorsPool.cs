@@ -88,6 +88,8 @@ namespace BusLib.BatchEngineCore.Handlers
             _resolver = resolver;
             _frameworkLogger = frameworkLogger;
             //Start(_token);
+            Interval= TimeSpan.FromMilliseconds(1500);
+            //TaskTimoutCheckInterval = 1500;
         }
 
         internal override void OnStart()
@@ -175,17 +177,23 @@ namespace BusLib.BatchEngineCore.Handlers
         private ProcessConsumer BuildProcessConsumer(long processId, int processKey, long groupId)
         {
             Logger.Trace($"Process consumer build start for processId {processId}");
-            var taskHandler = _processRepository.GetProcessTaskHandler(processKey);
-            ProcessConsumer consumer = new ProcessConsumer(_token, processKey, processId, groupId, _stateManager, _frameworkLogger, _cacheAside, taskHandler, _processRepository.GetSerializer(taskHandler), Bus, _frameworkLogger);
+            var executionContext = _cacheAside.GetProcessExecutionContext(processId);
+
+            var taskHandler = _processRepository.GetProcessTaskHandler(executionContext.Configuration.ProcessKey);//processKey
+            ProcessConsumer consumer = new ProcessConsumer(_token, processKey, processId, groupId, _stateManager, _frameworkLogger, taskHandler, 
+                _processRepository.GetSerializer(taskHandler), Bus, _frameworkLogger, _resolver.Resolve<ITaskListenerHandler>(), executionContext);
             consumer.SweeperAction = Trigger;
             consumer.Start();
             consumer.Completion.ContinueWith(c =>
             {
                 Logger.Trace($"Process consumer for processId {processId} stopped and removing from storage. Faulted {c.IsFaulted}, Cancel {c.IsCanceled}, completed {c.IsCompleted}");
+                _processConsumer.TryRemove(processId, out ProcessConsumer cns);
                 //todo publish consumer complete notification
                 consumer.SweeperAction = null;
-                consumer.Dispose();
-                _processConsumer.TryRemove(processId, out ProcessConsumer cns);
+                Robustness.Instance.SafeCall(() =>
+                {
+                    consumer.Dispose();
+                }, Logger);
             });
 
             Logger.Trace($"Process consumer created processId {processId}");
@@ -206,11 +214,16 @@ namespace BusLib.BatchEngineCore.Handlers
                 if(Interrupter.IsCancellationRequested)
                     return;
 
-                Robustness.Instance.SafeCall(async () =>
+                //Robustness.Instance.SafeCall(async () =>
+                //{
+                //    await pair.Value.SweepItems();
+                //});
+
+                Robustness.Instance.SafeCall(() =>
                 {
-                    await pair.Value.SweepItems();
+                    pair.Value.SweepItems().Wait(_token);
                 });
-                
+
             }
         }
     }

@@ -17,6 +17,8 @@ namespace BusLib.BatchEngineCore.Process
         ITask GetProcessTaskHandler(int processKey);
 
         ISerializer GetSerializer(ITask taskHandler);
+        void InvokeOnMaster();
+        void InvokeOnSlave();
     }
 
 
@@ -27,16 +29,20 @@ namespace BusLib.BatchEngineCore.Process
         void OnSlave();
     }
 
-    internal class ProcessRepository : IProcessRepository
+    internal class ProcessRepository : IProcessRepository, ITaskListenerHandler
     {
         readonly List<IBaseProcess> _registeredProcesses = new List<IBaseProcess>();
         private readonly ConcurrentDictionary<int, ITask> _taskExecutors = new ConcurrentDictionary<int, ITask>(); //todo scan from assemblies
+        private readonly List<ITaskListener> _taskListener = new List<ITaskListener>();
         readonly ISerializersFactory _serializersFactory;
         private readonly ConcurrentDictionary<int, ISerializer> _taskSerializers = new ConcurrentDictionary<int, ISerializer>();
         readonly List<IMasterSlaveObserver> _masterSlaveObservers=new List<IMasterSlaveObserver>();
 
-        public ProcessRepository()
+        private readonly IResolver _resolver;
+
+        public ProcessRepository(IResolver resolver)
         {
+            this._resolver = resolver;
             _serializersFactory = SerializersFactory.Instance;
             //todo scan through ioc
             //todo verify process configurations on registration
@@ -159,6 +165,16 @@ namespace BusLib.BatchEngineCore.Process
                 _masterSlaveObservers.Add(ins);
             }
 
+            var lst = _resolver.Resolve<IEnumerable<ITaskListener>>();
+            _taskListener.AddRange(lst);
+
+            //var taskListenerType = typeof(ITaskListener);
+            //var taskListeners = types.Where(t => taskListenerType.IsAssignableFrom(t)).ToList();
+            //foreach (var listener in taskListeners)
+            //{
+            //    ITaskListener taskListener = (ITaskListener) _resolver.Resolve(listener); //Activator.CreateInstance(listener);
+            //    _taskListener.Add(taskListener);
+            //}
 
         }
 
@@ -167,7 +183,7 @@ namespace BusLib.BatchEngineCore.Process
             return _registeredProcesses.AsReadOnly();
         }
 
-        internal void InvokeOnMaster()
+        public void InvokeOnMaster()
         {
             foreach (var observer in _masterSlaveObservers)
             {
@@ -178,7 +194,7 @@ namespace BusLib.BatchEngineCore.Process
             }
         }
 
-        internal void InvokeOnSlave()
+        public void InvokeOnSlave()
         {
             foreach (var observer in _masterSlaveObservers)
             {
@@ -186,6 +202,26 @@ namespace BusLib.BatchEngineCore.Process
                 {
                     observer.OnSlave();
                 });
+            }
+        }
+
+        public void InvokeBeforeExecute(ITaskContext taskContext)
+        {
+            foreach (var listener in _taskListener)
+            {
+                taskContext.Logger.Trace("Invoking listener {name}", listener.Name);
+                Robustness.Instance.SafeCall(()=>listener.BeforeExecute(taskContext), taskContext.Logger,
+                    $"Error while triggering \'Before\' taskListener {listener.GetType()} {{0}} and name {listener.Name}");
+            }
+        }
+
+        public void InvokeAfterExecute(ITaskContext taskContext)
+        {
+            foreach (var listener in _taskListener)
+            {
+                taskContext.Logger.Trace("Invoking listener {name}", listener.Name);
+                Robustness.Instance.SafeCall(() => listener.AfterExecute(taskContext), taskContext.Logger,
+                    $"Error while triggering \'After\' taskListener {listener.GetType()} {{0}} and name {listener.Name}");
             }
         }
     }

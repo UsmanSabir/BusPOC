@@ -18,7 +18,7 @@ namespace BusLib.Helper
         //MemoryCache.Default;  //20 mins expiry of pool
         IProcessExecutionContext GetProcessExecutionContext(long processId);
 
-        IProcessConfiguration GetProcessConfiguration(int processKey);
+        IProcessConfiguration GetProcessConfiguration(int processId);
 
         object GetProcessData(int processId, string dataKey); // might be from central cache, a dictionary of string,object type to store data
 
@@ -59,7 +59,7 @@ namespace BusLib.Helper
                 {
                     if(_processExecutionContexts.TryRemove(processId, out IProcessExecutionContext pe))
                     {
-                        _processConfigurations.TryRemove(pe.ProcessState.ProcessKey, out IProcessConfiguration cnf);
+                        _processConfigurations.TryRemove(pe.ProcessState.ProcessId, out IProcessConfiguration cnf);
                     }
 
                     _storage.CleanProcessData(msg.Parameter);
@@ -78,25 +78,26 @@ namespace BusLib.Helper
                     throw new FrameworkException($"BatchProcess not found for process id {processId}");
                 }
 
-                var config = GetProcessConfiguration(process.ProcessKey);
-                var executionContext = new ProcessExecutionContext(_batchLoggerFactory.GetProcessLogger(processId, process.ProcessKey, process.CorrelationId), process, config, _storage);
+                var config = GetProcessConfiguration(process.ProcessId);
+                var groupEntity = _stateManager.GetGroupEntity(process.GroupId);
+                var executionContext = new ProcessExecutionContext(_batchLoggerFactory.GetProcessLogger(processId, process.ProcessId, process.CorrelationId), process, config, _storage, groupEntity);
                 return executionContext;
             });
 
             return context;
         }
 
-        public IProcessConfiguration GetProcessConfiguration(int processKey)
+        public IProcessConfiguration GetProcessConfiguration(int processId)
         {
-            var cfg = _processConfigurations.GetOrAdd(processKey, key =>
+            var cfg = _processConfigurations.GetOrAdd(processId, key =>
             {
                 var config = _stateManager.GetProcessConfiguration(key);
                 return config;
             });
             if (cfg== null)
             {
-                _processConfigurations.TryRemove(processKey, out cfg);
-                throw new FrameworkException($"Process configuration not found for process key {processKey}");
+                _processConfigurations.TryRemove(processId, out cfg);
+                throw new FrameworkException($"Process configuration not found for process key {processId}");
             }
 
             return cfg;

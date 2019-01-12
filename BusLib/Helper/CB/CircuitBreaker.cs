@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Threading;
+using BusLib.BatchEngineCore.Exceptions;
+using BusLib.Core;
 
 namespace BusLib.Helper.CB
 {
@@ -10,6 +12,7 @@ namespace BusLib.Helper.CB
         private readonly object halfOpenSyncObject = new object();
 
         private string resourceName;
+        private readonly ILogger _logger;
 
         private TimeSpan openToHalfOpenWaitTime;
 
@@ -19,14 +22,15 @@ namespace BusLib.Helper.CB
 
         public string ResourceName { get { return resourceName; } }
 
-        public CircuitBreaker(string resource, int openToHalfOpenWaitTimeInMilliseconds)
+        public CircuitBreaker(string resource, int openToHalfOpenWaitTimeInMilliseconds, ILogger logger)
         {
             stateStore = CircuitBreakerStateStoreFactory.GetCircuitBreakerStateStore(resource);
             resourceName = resource;
+            _logger = logger;
             openToHalfOpenWaitTime = new TimeSpan(0, 0, 0, 0, openToHalfOpenWaitTimeInMilliseconds);
         }
 
-        public void Invoke(Action action)
+        public void Invoke(Action action, bool isRetry=false)
         {
             if (IsOpen)
             {
@@ -44,7 +48,10 @@ namespace BusLib.Helper.CB
             {
                 // If an exception still occurs here, simply 
                 // re-trip the breaker immediately.
-                this.TrackException(ex);
+                var isTransient = this.TrackException(ex, isRetry);
+
+                //if(!isRetry && isTransient)
+                //    Invoke(action, true); //retry here
 
                 // Throw the exception so that the caller can tell
                 // the type of exception that was thrown.
@@ -72,7 +79,7 @@ namespace BusLib.Helper.CB
             }
         }
 
-        private void TrackException(Exception ex)
+        private bool TrackException(Exception ex, bool isRetry = false)
         {
             // For simplicity in this example, open the circuit breaker on the first exception.
             // In reality this would be more complex. A certain type of exception, such as one
@@ -80,9 +87,14 @@ namespace BusLib.Helper.CB
             // Alternatively it may count exceptions locally or across multiple instances and
             // use this value over time, or the exception/success ratio based on the exception
             // types, to open the circuit breaker.
-            var isTransient = TransientFaultHandling.IsTransient(ex);
-            if(isTransient)
+            var isTransient = TransientFaultHandling.IsCircuitBreaker(ex);
+            if (isTransient && isRetry)
+            {
+                _logger.Warn("Circuit breaker going to trip due to error {exception}", ex);
                 this.stateStore.Trip(ex);
+            }
+
+            return isTransient;
         }
 
         private void WhenCircuitIsOpen(Action action)
@@ -121,6 +133,11 @@ namespace BusLib.Helper.CB
                         this.stateStore.Reset();
                         return;
                     }
+                }
+                catch (FrameworkException)
+                {
+                    this.stateStore.Reset(); //connection restored. 
+                    throw;
                 }
                 catch (Exception ex)
                 {

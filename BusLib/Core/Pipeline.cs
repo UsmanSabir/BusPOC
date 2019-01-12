@@ -78,7 +78,7 @@ namespace BusLib.Core
                 _featureHandlersCollection.Clear();
             });
             
-            Robustness.Instance.SafeCall(()=> _handler.Dispose());
+            Robustness.Instance.SafeCall(()=> _handler.Dispose()); //todo, pass disposing parameter
 
             base.Dispose(disposing);
         }

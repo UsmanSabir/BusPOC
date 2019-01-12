@@ -47,7 +47,7 @@ namespace BusImpl.Redis
             _customChannel = customChannel??PubChannel;
             this.Serializer = new RedisSerializer();
             
-            CreateClient();
+            //CreateClient();
         }
 
         protected string CustomChannel
@@ -63,7 +63,7 @@ namespace BusImpl.Redis
             ConfigurationOptions options = ConfigurationOptions.Parse(_connection);//$"{_connection};keepAlive=60;"
             //options.ReconnectRetryPolicy = new LinearRetry();
 
-            _redis = ConnectionMultiplexer.Connect(options);//todo configure retry timeout etc
+            _redis = ConnectionMultiplexer.Connect(_connection);// options);//todo configure retry timeout etc
             
             
             //StackExchangeRedisCacheClient(_serializer, _connection);
@@ -76,17 +76,22 @@ namespace BusImpl.Redis
         {
             try
             {
+                if (_redis == null)
+                    CreateClient(); //first call
+
                 _redis.GetDatabase().StringGet("Ping");
             }
             catch (Exception e)
             {
+                Logger?.Warn("Redis client disconnected");
+
                 _redis?.Dispose();
                 _redis = null;
 
                 Robustness.Instance.ExecuteUntilTrue(() =>
                 {
                     CreateClient();
-                }, _token);
+                }, _token, Logger);
                 
             }
             return _redis.GetDatabase();

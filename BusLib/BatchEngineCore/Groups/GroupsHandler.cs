@@ -61,6 +61,14 @@ namespace BusLib.BatchEngineCore.Groups
         {
             if (GroupActions.Start == message.Action)
             {
+                var groupEntity = _stateManager.GetGroupEntity(message.GroupId);
+                if (groupEntity.IsGenerated)
+                {
+                    _logger.Warn("Group {groupId} already generated", message.GroupId);
+                    return null;
+                }
+
+                //message.Group = groupEntity;
                 List<int> groupProcesses;
 
                 if (!message.IsProcessSubmission)
@@ -99,14 +107,14 @@ namespace BusLib.BatchEngineCore.Groups
             ////publish group stop message
         }
 
-        internal SubmittedGroup CreateProcesses(IReadWritableGroupEntity @group, List<int> processKeys,
+        internal SubmittedGroup CreateProcesses(IReadWritableGroupEntity @group, List<int> processIds,
             List<JobCriteria> messageCriteria)
         {
             var groupLogger = _loggerFactory.GetGroupLogger(group.Id, group.GroupKey);
             groupLogger.Trace("Starting group");
 
 
-            if (processKeys ==null || processKeys.Count == 0)
+            if (processIds ==null || processIds.Count == 0)
             {
                 _logger.Error("No process found for group");
                 StopGroup(@group, "No process found for group");
@@ -142,10 +150,11 @@ namespace BusLib.BatchEngineCore.Groups
 
             List<IReadWritableProcessState> processList = new List<IReadWritableProcessState>();
 
-            foreach (var processKey in processKeys)
+            foreach (var processId in processIds)
             {
                 var process = _entityFactory.CreateProcessEntity();
-                process.ProcessKey = processKey;
+                process.ProcessId = processId;
+                //process
                 //IReadWritableProcessState process = erf wer GetKeyProcesses(processKey);
                 //IWritableProcessState writableProcess = process;
                 process.GroupId = group.Id;
@@ -173,8 +182,10 @@ namespace BusLib.BatchEngineCore.Groups
             //}
             //else
             {
+                int groupSeqId = 0;
                 foreach (var criteria in messageCriteria)
                 {
+                    groupSeqId++;
                     foreach (var process in processList)
                     {
                         var p = process.Clone(_entityFactory);
@@ -186,6 +197,7 @@ namespace BusLib.BatchEngineCore.Groups
                         p.ProcessingDate = criteria.ProcessingDate;
                         p.Status= CompletionStatus.Pending;
                         p.Result = ResultStatus.Empty;
+                        p.GroupSeqId = groupSeqId;
                         //p.Tag = criteria.Tag; //todo
                         process2Submit.Add((criteria, p));
                     }
@@ -365,10 +377,10 @@ namespace BusLib.BatchEngineCore.Groups
                 foreach (var p in groupProcesses)
                 {
                     var processState = p.ProcessState;
-                    var processSubscribers = subscribers.Where(s=>s.ProcessKey== processState.ProcessKey).ToList();
+                    var processSubscribers = subscribers.Where(s=>s.ProcessKey== processState.ProcessId).ToList();
                     if (processSubscribers.Count > 0)
                     {
-                        ProcessSubmittedContext pContext = new ProcessSubmittedContext(processState.Id, processState.ProcessKey, groupEntity.IsResubmission, groupEntity.SubmittedBy, p.Criteria, _loggerFactory.GetProcessLogger(processState.Id, processState.ProcessKey, processState.CorrelationId));
+                        ProcessSubmittedContext pContext = new ProcessSubmittedContext(processState.Id, processState.ProcessId, groupEntity.IsResubmission, groupEntity.SubmittedBy, p.Criteria, _loggerFactory.GetProcessLogger(processState.Id, processState.ProcessId, processState.CorrelationId));
                         foreach (var subscriber in subscribers)
                         {
                             Robustness.Instance.SafeCall(() => subscriber.OnProcessSubmitted(pContext));

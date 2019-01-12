@@ -33,7 +33,7 @@ namespace BusLib
         private readonly TaskExecutorsPool _taskExecutorsRepo;
         //private Pipeline<GroupMessage> _grouPipeline;
         private Pipeline<IWatchDogMessage> _watchDogPipeline;
-        private readonly ProcessVolumePipeline _volumePipeline;
+        //private readonly ProcessVolumePipeline _volumePipeline;
         private readonly StatePersistencePipeline _statePersistencePipeline;
         private readonly CacheStoragePipeline _cacheCommandPipeline;
 
@@ -53,7 +53,7 @@ namespace BusLib
         private readonly IResolver _resolver;
         private readonly IBatchLoggerFactory _batchLoggerFactory;
 
-        private readonly ProcessRepository _processRepository;
+        private readonly IProcessRepository _processRepository;
         //private readonly ProcessWatchDog _watchDog;
 
         readonly ReaderWriterLockSlim _watchDogSync=new ReaderWriterLockSlim();
@@ -90,18 +90,25 @@ namespace BusLib
             
 
             _cacheAside = new CacheAside(_stateManager, _storage, EventAggregator, _logger, batchLoggerFactory);
-            _processRepository = new ProcessRepository();
+
+            _processRepository = _resolver.Resolve<IProcessRepository>();
+            //var taskListener = resolver.Resolve<ITaskListener>();
+            //if (!ReferenceEquals(taskListener, _processRepository))
+            //{
+            //    Console.WriteLine("ALERT");
+            //}
+
             _taskExecutorsRepo = new TaskExecutorsPool(_logger, _cacheAside, _cancellationToken, _stateManager, _processRepository, EventAggregator, resolver, _logger);
             
             
             //BuildCommandHandlerPipeline();
             _statePersistencePipeline = new StatePersistencePipeline(_logger, _cancellationToken);
-            this._databasePipeline = new DatabasePipeline(_logger, _cancellationToken, 500);//todo
+            this._databasePipeline = new DatabasePipeline(_logger, _cancellationToken, 0);//todo 500
 
             _taskProcessorPipeline = GetTaskProcessorPipeLine();
             //_grouPipeline=new GroupHandlerPipeline(_stateManager, _logger, _branchEngineSubscriber);
             
-            _volumePipeline = new ProcessVolumePipeline(_cancellationToken, _logger, _stateManager, _cacheAside, _processRepository, VolumeHandler, resolver);
+            //_volumePipeline = new ProcessVolumePipeline(_cancellationToken, _logger, _stateManager, _cacheAside, _processRepository, VolumeHandler, resolver, EventAggregator, _branchEngineSubscriber);
             _branchEngineSubscriber = new BatchEngineSubscribers();
             
             //_watchDog = new ProcessWatchDog(_logger, StateManager, _branchEngineSubscriber, _cacheAside, SerializersFactory.Instance, EntityFactory, EventAggregator, Storage);
@@ -112,6 +119,7 @@ namespace BusLib
             _taskProducer =new TaskProducerWorker(_logger, _cacheAside, VolumeHandler, resolver, batchLoggerFactory);
 
             _leaderManager = DistributedMutexFactory.CreateDistributedMutex(NodeSettings.Instance.LockKey, RunLocalWatchDog, () => SwitchToPubSubWatchDog(null), batchLoggerFactory.GetSystemLogger());
+            
         }
 
         #region Master/Slave
@@ -119,7 +127,11 @@ namespace BusLib
         private Task RunLocalWatchDog(CancellationToken token)
         {
             var completionSource = new TaskCompletionSource<bool>();
-            token.Register(() => { SwitchToPubSubWatchDog(completionSource); });
+            token.Register(() =>
+            {
+                if (!_cancellationToken.IsCancellationRequested)
+                    SwitchToPubSubWatchDog(completionSource);
+            });
 
             SwitchToLocalWatchDog();
             
@@ -134,16 +146,26 @@ namespace BusLib
                 _logger.Info("Switching to Master node");
                 _watchDogCancellationTokenSource?.Cancel();
 
-                var watchDog = new ProcessWatchDog(_logger, _stateManager, _branchEngineSubscriber, _cacheAside, SerializersFactory.Instance, EntityFactory, 
-                    EventAggregator, _storage, PubSubFactory, _resolver, _batchLoggerFactory);
-                _watchDogPipeline = new Pipeline<IWatchDogMessage>(watchDog);
+                if (_cancellationToken.IsCancellationRequested)
+                {
+                    _logger.Info("Bus stopped, can't switch to slave node");
+                    return;
+                }
 
                 _watchDogCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationToken);
+
+                var volumePipeline = new ProcessVolumePipeline(_watchDogCancellationTokenSource.Token, _logger, _stateManager, _cacheAside, _processRepository, VolumeHandler, _resolver, EventAggregator, _branchEngineSubscriber);//todo move to watchdog class
+                var watchDog = new ProcessWatchDog(_logger, _stateManager, _branchEngineSubscriber, _cacheAside, SerializersFactory.Instance, EntityFactory, 
+                    EventAggregator, _storage, PubSubFactory, _resolver, _batchLoggerFactory, _processRepository, volumePipeline);
+                _watchDogPipeline = new Pipeline<IWatchDogMessage>(watchDog);
+
                 _watchDogCancellationTokenSource.Token.Register(() =>
                 {
                     _logger.Info("Master node ended");
+                    _logger.Debug("Master node ended");
                     watchDog.Dispose();
                 });
+
                 watchDog.Start(_watchDogCancellationTokenSource.Token);
 
 
@@ -151,6 +173,7 @@ namespace BusLib
 
                 _leaderManager.InitializationComplete();
                 _logger.Info("Switching to Master node complete");
+                _logger.Debug("Running Master node");
             }
             catch (Exception e)
             {
@@ -170,19 +193,27 @@ namespace BusLib
             {
                 _logger.Info("Switching to Slave node");
                 _watchDogCancellationTokenSource?.Cancel();
+                if (_cancellationToken.IsCancellationRequested)
+                {
+                    _logger.Info("Bus stopped, can't switch to slave node");
+                    return;
+                }
+
+                _watchDogCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationToken);
 
                 var pubSubWatchDog = new PubSubWatchDog(_logger, _stateManager, PubSubFactory, _cancellationToken, EventAggregator);
                 _watchDogPipeline = new Pipeline<IWatchDogMessage>(pubSubWatchDog);
 
-                _watchDogCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_cancellationToken);
                 _watchDogCancellationTokenSource.Token.Register(() =>
                 {
                     _logger.Info("Slave node ended");
+                    _logger.Debug("Slave node ended");
                     pubSubWatchDog.Dispose();
                 });
 
                 completionSource?.SetResult(true);
                 _logger.Info("Switching to Slave node complete");
+                _logger.Debug("Running Slave node");
                 _processRepository.InvokeOnSlave();
 
                 _leaderManager.InitializationComplete();
@@ -259,10 +290,10 @@ namespace BusLib
             _cts.Dispose();
         }
 
-        internal void HandleVolumeRequest(ProcessExecutionContext msg)
-        {
-            _volumePipeline.Invoke(msg);
-        }
+        //internal void HandleVolumeRequest(ProcessExecutionContext msg)
+        //{
+        //    _volumePipeline.Invoke(msg);
+        //}
 
 
         //internal void HandleGroupMessage(GroupMessage msg)

@@ -8,6 +8,8 @@ namespace BusLib.BatchEngineCore
 {
     public interface IProcessConfiguration
     {
+        int ProcessId { get; } //screenId
+
         int ProcessKey { get;  }
 
         int BatchSize { get; }
@@ -25,5 +27,7 @@ namespace BusLib.BatchEngineCore
 
         int MaxVolumeRetries { get; }
         int? QueueSize { get;  }
+
+        int? ErrorThreshold { get; }
     }
 }

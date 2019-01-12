@@ -36,7 +36,7 @@ namespace BusLib.BatchEngineCore.Handlers
 
             base.Dispose(disposing);
 
-            Transaction?.Rollback();
+            Robustness.Instance.SafeCall(()=> Transaction?.Rollback());
         }
 
         internal IReadWritableTaskState TaskStateWritable { get; }
@@ -59,6 +59,7 @@ namespace BusLib.BatchEngineCore.Handlers
         }
 
         public int DeferredCount => State.DeferredCount;
+        public bool IsRetry => State.FailedCount > 0;
 
         internal SafeDisposableActions OnCompleteActions { get; private set; }
 
@@ -99,5 +100,9 @@ namespace BusLib.BatchEngineCore.Handlers
             return true;
         }
 
+        public void SetResult(ResultStatus result)
+        {
+            Result = result;
+        }
     }
 }

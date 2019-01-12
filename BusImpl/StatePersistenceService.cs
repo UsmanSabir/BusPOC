@@ -50,6 +50,16 @@ namespace BusImpl
             throw new NotImplementedException();
         }
 
+        public IEnumerable<IReadWritableProcessState> GetIncompleteProcesses()
+        {
+            throw new NotImplementedException();
+        }
+
+        public long GetIncompleteTasksCountForProcess(long processId)
+        {
+            throw new NotImplementedException();
+        }
+
         public IEnumerable<ITaskState> GetIncompleteTasksForProcess(long processId)
         {
             throw new NotImplementedException();
@@ -111,6 +121,11 @@ namespace BusImpl
         }
 
         public void UpdateTask(ITaskState task, ITransaction runningTransaction)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void UpdateTask(ITaskState task, ITransaction runningTransaction, bool commit = false)
         {
             throw new NotImplementedException();
         }

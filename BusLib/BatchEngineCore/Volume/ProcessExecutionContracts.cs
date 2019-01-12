@@ -35,7 +35,13 @@ namespace BusLib.BatchEngineCore
 
         object GetTempData(string key);
 
+        //
         //IFrameworkLogger FrameworkLogger { get; }
+    }
+
+    public interface IProcessExecutionContextWithVolume : IProcessExecutionContext
+    {
+        void SetVolumeGenerated();
     }
 
     public interface IProcessState
@@ -58,7 +64,7 @@ namespace BusLib.BatchEngineCore
 
         DateTime ProcessingDate { get; }
 
-        int ProcessKey { get; }
+        int ProcessId { get; }
 
         bool IsVolumeGenerated { get; }
 
@@ -74,6 +80,8 @@ namespace BusLib.BatchEngineCore
         DateTime? GenerationCompleteTime { get; }
 
         ResultStatus Result { get; }
+        int GroupSeqId { get; }
+        bool HasVolume { get; }
     }
 
     public interface IWritableProcessState
@@ -96,7 +104,7 @@ namespace BusLib.BatchEngineCore
 
         DateTime ProcessingDate { set; }
 
-        int ProcessKey { set; }
+        int ProcessId { set; }
 
         bool IsVolumeGenerated { set; }
 
@@ -111,6 +119,9 @@ namespace BusLib.BatchEngineCore
         DateTime? CompleteTime { set; }
         DateTime? GenerationCompleteTime { set; }
         ResultStatus Result { set; }
+        int GroupSeqId { set; }
+
+        bool HasVolume { set; }
     }
 
     public interface IReadWritableProcessState: IWritableProcessState, IProcessState
@@ -125,7 +136,7 @@ namespace BusLib.BatchEngineCore
         new int BranchId { get; set; }
         new int SubTenantId { get; set; }
         new DateTime ProcessingDate { get; set; }
-        new int ProcessKey { get; set; }
+        new int ProcessId { get; set; } //screenId
         new bool IsVolumeGenerated { get; set; }
         new long? ParentId { get; set; }
         new long GroupId { get; set; }
@@ -136,5 +147,7 @@ namespace BusLib.BatchEngineCore
         new DateTime? CompleteTime { get; set; }
         new DateTime? GenerationCompleteTime { get; set; }
         new ResultStatus Result { get; set; }
+        new int GroupSeqId { get; set; }
+        new bool HasVolume { get; set; }
     } 
 }

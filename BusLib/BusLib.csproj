@@ -23,7 +23,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -36,6 +36,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -57,6 +58,7 @@
     <Compile Include="BatchEngineCore\Groups\GroupHandlerPipeline.cs" />
     <Compile Include="BatchEngineCore\Groups\GroupMessage.cs" />
     <Compile Include="BatchEngineCore\Groups\IGroupContext.cs" />
+    <Compile Include="BatchEngineCore\Groups\ProcessErrorWatcher.cs" />
     <Compile Include="BatchEngineCore\JobCriteria.cs" />
     <Compile Include="BatchEngineCore\Process\IProcessRepository.cs" />
     <Compile Include="BatchEngineCore\PubSub\DashboardService.cs" />
@@ -131,6 +133,8 @@
     <Compile Include="PipelineFilters\CircuitBreakerFeatureHandler.cs" />
     <Compile Include="PipelineFilters\ConsumerFilter.cs" />
     <Compile Include="PipelineFilters\DuplicateCheckFilter.cs" />
+    <Compile Include="PipelineFilters\RetryAlertFeatureHandler.cs" />
+    <Compile Include="PipelineFilters\RetryCircuitBreakerFeatureHandler.cs" />
     <Compile Include="PipelineFilters\RetryFeatureHandler.cs" />
     <Compile Include="PipelineFilters\TasksThrottlingFilter.cs" />
     <Compile Include="PipelineFilters\ThrottlingFilter.cs" />

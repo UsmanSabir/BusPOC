@@ -5,7 +5,7 @@ namespace BusImpl
     public class Constant
     {
         public static readonly string SQLCountFailedTasks =
-            $"SELECT COUNT(1) FROM BatchTaskState WHERE CurrentState = '{ResultStatus.Error.Name}' AND ProcessId=@pid";
+            $"SELECT COUNT(1) FROM BatchTaskState WITH(NOLOCK) WHERE CurrentState = '{ResultStatus.Error.Name}' AND ProcessId=@pid";
 
         public static readonly string SQLRetryFailedTasks =
             $"UPDATE BatchTaskState SET IsFinished = 0, NodeKey=NULL, CurrentState='{ResultStatus.Empty.Name}' WHERE CurrentState = 'Error' AND ProcessId=@0"; //todo what about start/complete date time, DeferredCount, IsStopped
@@ -33,10 +33,13 @@ WHERE TaskId = @0 AND StateKey=@1;";
   SET IsStopped=1,
     UpdatedOn=@1,
 	CurrentState=@2,
-	NodeKey=@3,	  
+	NodeKey=@3
 WHERE ProcessId = @0 AND NodeKey IS NULL AND CurrentState=@4;";
 
         public const string SQLPing = "SELECT GETUTCDATE()";
+
+        public const string SQLDeleteProcessVolume = @"DELETE FROM dbo.BatchTaskState WHERE ProcessId = @0";
+
 
     }
 }

@@ -40,15 +40,22 @@
       <HintPath>..\packages\Newtonsoft.Json.12.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <HintPath>..\packages\NLog.4.5.11\lib\net45\NLog.dll</HintPath>
+      <HintPath>..\packages\NLog.4.5.10\lib\net45\NLog.dll</HintPath>
     </Reference>
     <Reference Include="Pipelines.Sockets.Unofficial, Version=1.0.0.0, Culture=neutral, PublicKeyToken=42ea0a778e13fbe2, processorArchitecture=MSIL">
       <HintPath>..\..\..\packages\Pipelines.Sockets.Unofficial.1.0.7\lib\net461\Pipelines.Sockets.Unofficial.dll</HintPath>
+    </Reference>
+    <Reference Include="Sigil, Version=4.7.0.0, Culture=neutral, PublicKeyToken=2d06c3494341c8ab, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\Sigil.4.7.0\lib\net45\Sigil.dll</HintPath>
     </Reference>
     <Reference Include="StackExchange.Redis, Version=2.0.0.0, Culture=neutral, PublicKeyToken=c219ff1ca8c2ce46, processorArchitecture=MSIL">
       <HintPath>..\..\..\packages\StackExchange.Redis.2.0.519\lib\net461\StackExchange.Redis.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\..\..\packages\System.Buffers.4.4.0\lib\netstandard2.0\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Diagnostics.PerformanceCounter, Version=4.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -89,23 +96,30 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bootstrap.cs" />
-    <Compile Include="Class1.cs" />
     <Compile Include="Constant.cs" />
     <Compile Include="ContainerResolver.cs" />
     <Compile Include="Db\OrmWrapper.cs" />
     <Compile Include="EntityFactory.cs" />
+    <Compile Include="JobScheduler.cs" />
     <Compile Include="JsonSerializer.cs" />
+    <Compile Include="Listeners\LogContextTaskListener.cs" />
     <Compile Include="Logs\NLogFactory.cs" />
     <Compile Include="Logs\NLogWrapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PubSubImpl\Redis\RedisPublisher.cs" />
+    <Compile Include="PubSubImpl\Redis\RedisPubSubFactory.cs" />
+    <Compile Include="PubSubImpl\Udp\UdpPublisher.cs" />
+    <Compile Include="PubSubImpl\Udp\UdpPubSubFactory.cs" />
+    <Compile Include="PubSubImpl\Udp\UdpSingletonPublisher.cs" />
+    <Compile Include="PubSubImpl\Udp\UdpSubscriber.cs" />
     <Compile Include="Redis\DistributedMutexFactory.cs" />
     <Compile Include="Redis\RedisDistributedLock.cs" />
     <Compile Include="Redis\RedisManagerPool.cs" />
     <Compile Include="Redis\RedisProcessStorage.cs" />
-    <Compile Include="Redis\RedisPublisher.cs" />
-    <Compile Include="Redis\RedisPubSubFactory.cs" />
     <Compile Include="Redis\RedisSerializer.cs" />
     <Compile Include="Logs\SeriLoggerFactory.cs" />
+    <Compile Include="Sql\SqlDistributedLock.cs" />
+    <Compile Include="Sql\SqlLockFactory.cs" />
     <Compile Include="StatePersistenceService.cs" />
     <Compile Include="TransactionWrapper.cs" />
     <Compile Include="VolumeHandler.cs" />

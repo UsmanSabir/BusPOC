@@ -5,8 +5,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using BusLib.BatchEngineCore.Exceptions;
 using BusLib.BatchEngineCore.Handlers;
+using BusLib.BatchEngineCore.PubSub;
 using BusLib.BatchEngineCore.Saga;
 using BusLib.Helper;
 
@@ -18,7 +20,15 @@ namespace BusLib.BatchEngineCore
 
         Type VolumeDataType { get; }
 
-        void HandleVolume(IVolumeHandler handler, IProcessExecutionContext processContext);
+        void HandleVolume(IVolumeHandler handler, IProcessExecutionContextWithVolume processContext,
+            CancellationToken cancellationToken);
+
+        bool CanExecute(IProcessExecutionContext processContext);
+        void ProcessCompleted(IProcessExecutionContext processContext);
+        void ProcessFailed(IProcessExecutionContext processContext);
+        void ProcessFinalizer(IProcessExecutionContext processContext);
+        void OnRetry(IProcessRetryContext processContext);
+        void ProcessStopped(IProcessStoppedContext processContext);
     }
 
     public interface IBaseProcess<out T> : IBaseProcess
@@ -53,6 +63,11 @@ namespace BusLib.BatchEngineCore
 
         }
 
+        public virtual bool CanExecute(IProcessExecutionContext processContext)
+        {
+            return true;
+        }
+
         public virtual void ProcessCompleted(IProcessExecutionContext processContext)
         {
 
@@ -68,12 +83,25 @@ namespace BusLib.BatchEngineCore
 
         }
 
-        void IBaseProcess.HandleVolume(IVolumeHandler handler, IProcessExecutionContext processContext)
+        public virtual void OnRetry(IProcessRetryContext processContext)
+        {
+            
+        }
+
+        public virtual void ProcessStopped(IProcessStoppedContext processContext)
+        {
+            
+        }
+
+        void IBaseProcess.HandleVolume(IVolumeHandler handler, IProcessExecutionContextWithVolume processContext,
+            CancellationToken cancellationToken)
         {
             var volumeGenerated = processContext.ProcessState.IsVolumeGenerated;
             if (!volumeGenerated || CanRegenerateVolume)
             {
-                handler.Handle(GetVolume(processContext), processContext); //volume visitor
+                var volume = GetVolume(processContext);
+                if (volume != null)
+                    handler.Handle(volume, processContext, cancellationToken); //volume visitor
             }            
 
         }

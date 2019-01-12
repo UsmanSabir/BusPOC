@@ -1,4 +1,5 @@
-﻿using Autofac;
+﻿using System;
+using Autofac;
 using BusLib.Helper;
 
 namespace BusImpl
@@ -15,6 +16,11 @@ namespace BusImpl
         public T Resolve<T>()
         {
             return _container.Resolve<T>();
+        }
+
+        public object Resolve(Type type)
+        {
+            return _container.Resolve(type);
         }
     }
 }

@@ -108,7 +108,7 @@ namespace BusLib.BatchEngineCore.PubSub
             {
                 IsWorking = true,
                 NodeKey = NodeSettings.Instance.Name,
-                Sender = NodeSettings.Instance.Name
+                Sender = Dns.GetHostName()
             });
         }
     }

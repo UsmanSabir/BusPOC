@@ -13,6 +13,10 @@ namespace BusLib.BatchEngineCore.Exceptions
         {
             
         }
+        public FrameworkException(string errMsg, Exception innerException) : base(errMsg, innerException)
+        {
+
+        }
     }
 
 

@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Configuration;
+using System.Threading;
 
 namespace BusLib.BatchEngineCore
 {
@@ -8,13 +9,19 @@ namespace BusLib.BatchEngineCore
 
         public NodeSettings()
         {
-            LockKey = "BPEM" + System.Diagnostics.Process.GetCurrentProcess().Id;
+            LockKey = "BatchEngine"; // + System.Diagnostics.Process.GetCurrentProcess().Id
+            var throttlingSettings = ConfigurationManager.AppSettings["Throttling"];
+            if (!string.IsNullOrWhiteSpace(throttlingSettings) &&
+                int.TryParse(throttlingSettings, out int throttling) && throttling >= 0)
+            {
+                Throttling = throttling;
+            }
         }
 
         public static NodeSettings Instance => _instance ?? (_instance = new NodeSettings()); //todo
 
-        public string Name { get; private set; } = "Node1"; //todo
-        public int Throttling { get; private set; } = 1;
+        public string Name { get; private set; } = ConfigurationManager.AppSettings["NodeId"]?? "Node"; //todo
+        public int Throttling { get; private set; } = 0;
         public string LockKey { get; private set; }
     }
 }

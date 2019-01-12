@@ -7,57 +7,59 @@ using BusLib.PipelineFilters;
 
 namespace BusLib.BatchEngineCore.StatePersistence
 {
-    public class DbCircuitBreakerFeatureHandler: CircuitBreakerFeatureHandler<DbAction>
+    public class DbCircuitBreakerFeatureHandler: RetryCircuitBreakerFeatureHandler<DbAction>
     {
         private readonly string _name;
         private readonly ILogger _logger;
         private readonly CancellationToken _token;
 
-        public DbCircuitBreakerFeatureHandler(string name, ILogger logger, CancellationToken token, int delayInRetries = 1000) : base(name, logger, token, delayInRetries)
+        public DbCircuitBreakerFeatureHandler(string name, ILogger logger, CancellationToken token, int? maxRetries,
+            int delayInRetries = 1000) 
+            : base(name, maxRetries, logger, token, delayInRetries)
         {
             _name = name;
             _logger = logger;
             _token = token;
         }
 
-        public override void FeatureDecoratorHandler(DbAction message)
-        {
-            //base.FeatureDecoratorHandler(message);
-            while (true)
-            {
-                try
-                {
-                    _token.ThrowIfCancellationRequested();
+        //public override void FeatureDecoratorHandler(DbAction message)
+        //{
+        //    //base.FeatureDecoratorHandler(message);
+        //    while (true)
+        //    {
+        //        try
+        //        {
+        //            _token.ThrowIfCancellationRequested();
 
-                    if (message.Action== DbActions.Error)
-                    {
-                        //todo what now
-                    }
-                    _breaker.Invoke(
-                        // This is the operation we want to execute.
-                        () => Handler?.Handle(message)
-                    );
+        //            if (message.Action== DbActions.Error)
+        //            {
+        //                //todo what now
+        //            }
+        //            _breaker.Invoke(
+        //                // This is the operation we want to execute.
+        //                () => Handler?.Handle(message)
+        //            );
 
-                    _logger.Trace($"CircuitBreaker '{_name}' request completed");
-                    return;
-                }
-                catch (CircuitBreakerOpenException e)
-                {
-                    _logger.Warn($"CircuitBreaker '{_name}' Open with internal exception {e.InnerException?.Message}");
-                }
-                catch (Exception e)
-                {
-                    //if (IsTransient(e))
-                    //{
-                    //    _logger.Warn($"CircuitBreaker '{_name}' retrying with transient error {e.Message}");
-                    //}
-                    //else
-                    {
-                        _logger.Warn($"CircuitBreaker '{_name}' got error {e.Message}", e);
-                        throw;
-                    }
-                }
-            }
+        //            _logger.Trace($"CircuitBreaker '{_name}' request completed");
+        //            return;
+        //        }
+        //        catch (CircuitBreakerOpenException e)
+        //        {
+        //            _logger.Warn($"CircuitBreaker '{_name}' Open with internal exception {e.InnerException?.Message}");
+        //        }
+        //        catch (Exception e)
+        //        {
+        //            //if (IsTransient(e))
+        //            //{
+        //            //    _logger.Warn($"CircuitBreaker '{_name}' retrying with transient error {e.Message}");
+        //            //}
+        //            //else
+        //            {
+        //                _logger.Warn($"CircuitBreaker '{_name}' got error {e.Message}", e);
+        //                throw;
+        //            }
+        //        }
+        //    }
         }
     }
-}
+//}

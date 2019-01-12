@@ -18,6 +18,11 @@ namespace BusImpl.SeriLog
         }
 
 
+        public void Debug(string msg)
+        {
+            Console.WriteLine(msg);
+        }
+
         public void Trace(string message, params object[] args)
         {
             _loggerImplementation.Trace(message, args);

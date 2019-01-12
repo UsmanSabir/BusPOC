@@ -3,8 +3,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using BusLib.BatchEngineCore;
+using BusLib.BatchEngineCore.Exceptions;
 using BusLib.BatchEngineCore.Groups;
 using BusLib.BatchEngineCore.Handlers;
+using BusLib.BatchEngineCore.Process;
 using BusLib.BatchEngineCore.PubSub;
 using BusLib.BatchEngineCore.Volume;
 using BusLib.Core;
@@ -26,15 +28,57 @@ namespace BusLib.Helper
             return (int) totalMilliseconds;
         }
 
-        public static void MarkAsError(this ProcessExecutionContext context, IStateManager stateManager, string errorMessage)
+        public static void MarkAsError(this ProcessExecutionContext context, IStateManager stateManager,
+            string errorMessage, IProcessRepository registeredProcesses, IBatchEngineSubscribers batchEngineSubscribers,
+            IFrameworkLogger fLogger)
         {
             context.Logger.Error(errorMessage);
             context.WritableProcessState.Status = CompletionStatus.Finished;
             context.WritableProcessState.Result= ResultStatus.Error;
             context.WritableProcessState.CompleteTime=DateTime.UtcNow;
             stateManager.SaveProcess(context.WritableProcessState);
+
+            context.WritableProcessState.TriggerProcessEvents(registeredProcesses, context, true, context.ProcessState.IsStopped, batchEngineSubscribers, fLogger, errorMessage);
         }
-        
+
+        #region InvokeProcessCompeteEvent(Commented)
+
+        //public static void InvokeProcessCompeteEvent(this IBaseProcess process, IProcessExecutionContext context, bool isFailed=false)
+        //{
+        //    if (isFailed)
+        //    {
+        //        Robustness.Instance.SafeCall(() =>
+        //        {
+        //            process.ProcessCompleted(context);
+        //        });
+        //    }
+        //    else
+        //    {
+        //        Robustness.Instance.SafeCall(() =>
+        //        {
+        //            process.ProcessFailed(context);
+        //        });
+        //    }
+
+        //    Robustness.Instance.SafeCall(() =>
+        //    {
+        //        process.ProcessFinalizer(context);
+        //    });
+        //}
+
+        #endregion
+
+        public static void InvokeProcessRetry(this IBaseProcess process, IProcessRetryContext context)
+        {
+            {
+                Robustness.Instance.SafeCall(() =>
+                {
+                    process.OnRetry(context);
+                }, context.Logger);
+            }
+        }
+
+
         public static void MarkAsVolumeGenerated(this IReadWritableProcessState context, IStateManager stateManager)
         {
             //todo: send to stateManager queue
@@ -67,7 +111,7 @@ namespace BusLib.Helper
         public static IReadWritableProcessState Clone(this IReadWritableProcessState process, IEntityFactory factory)
         {
             var entity = factory.CreateProcessEntity();
-            entity.ProcessKey = process.ProcessKey;
+            entity.ProcessId = process.ProcessId;
             entity.BranchId = process.BranchId;
             entity.CompanyId = process.CompanyId;
             entity.CorrelationId = process.CorrelationId;
@@ -85,10 +129,13 @@ namespace BusLib.Helper
             Exception exception = null)
         {
             return
-                $"{msg ?? string.Empty} for process Id: {context.ProcessState.Id}, Key: {context.ProcessState.ProcessKey}, CorrelationId: {context.ProcessState.CorrelationId}{(exception != null ? exception.ToString() : string.Empty)}";
+                $"{msg ?? string.Empty} for process QId: {context.ProcessState.Id}, Id: {context.ProcessState.ProcessId}, CorrelationId: {context.ProcessState.CorrelationId}{(exception != null ? exception.ToString() : string.Empty)}";
         }
 
-        public static void MarkProcessStatus(this IReadWritableProcessState state, CompletionStatus completionStatus, ResultStatus result, string reason, IStateManager stateManager)
+        public static void MarkProcessStatus(this IReadWritableProcessState state, CompletionStatus completionStatus,
+            ResultStatus result, string reason, IStateManager stateManager, IProcessRepository registeredProcesses,
+            IProcessExecutionContext executionContext, IBatchEngineSubscribers batchEngineSubscribers,
+            IFrameworkLogger fLogger)
         {
             state.Status = completionStatus;
             state.Result = result;
@@ -100,9 +147,134 @@ namespace BusLib.Helper
             state.IsStopped = completionStatus.Id == CompletionStatus.Stopped.Id;
 
             stateManager.SaveProcess(state);
+
+            state.TriggerProcessEvents(registeredProcesses, executionContext, result.Id == ResultStatus.Error.Id, state.IsStopped, 
+                batchEngineSubscribers, fLogger, reason);
         }
 
-        public static int RetryProcess(this IReadWritableProcessState state, IStateManager steManager)
+        static void TriggerProcessEvents(this IReadWritableProcessState state, IProcessRepository registeredProcesses, IProcessExecutionContext context,
+            bool isFailed, bool isStopped, IBatchEngineSubscribers batchEngineSubscribers, IFrameworkLogger fLogger, string reason)
+        {
+            
+            var process = registeredProcesses.GetRegisteredProcesses().FirstOrDefault(p => p.ProcessKey == context.Configuration.ProcessKey);
+            //var context = _cacheAside.GetProcessExecutionContext(state.Id);
+            //process?.InvokeProcessCompeteEvent(context, isFailed);
+
+            var subscribers = batchEngineSubscribers.GetProcessSubscribers().Where(p => p.ProcessKey == context.Configuration.ProcessKey);
+            //ProcessRetryContext ct =new ProcessRetryContext(context.ProcessState.Id, context.ProcessState.ProcessKey, context.Logger);
+            ProcessCompleteContext ct = new ProcessCompleteContext(context.ProcessState.Id, context.ProcessState.ProcessId, false, false, context.Logger);
+
+            //IProcessCompleteContext ctx=new proccom
+            ProcessStoppedContext processStoppedContext=null;
+
+            foreach (var subscriber in subscribers)
+            {
+                if (isFailed)
+                {
+                    Robustness.Instance.SafeCall(()=>
+                    subscriber.ProcessFailed(ct)
+                    , fLogger);
+                }
+                else if (isStopped)
+                {
+                    if(processStoppedContext==null)
+                        processStoppedContext = new ProcessStoppedContext(state.Id, state.ProcessId, context.Configuration.ProcessKey, reason, context.Logger);
+
+                    var stoppedContext = processStoppedContext;//access to modified closure
+                    Robustness.Instance.SafeCall(() =>
+                            subscriber.OnProcessStop(stoppedContext)
+                        , fLogger);
+                }
+                else
+                {
+                    Robustness.Instance.SafeCall(() =>
+                        subscriber.OnProcessComplete(ct)
+                    , fLogger);
+                }
+            }
+
+            if (isStopped)
+            {
+                Robustness.Instance.SafeCall(() =>
+                {
+                    if (processStoppedContext == null)
+                        processStoppedContext = new ProcessStoppedContext(state.Id, state.ProcessId, context.Configuration.ProcessKey, reason, context.Logger);
+
+                    process?.ProcessStopped(processStoppedContext);
+                });
+            }
+            else if (isFailed)
+            {
+                Robustness.Instance.SafeCall(() =>
+                {
+                    process?.ProcessFailed(context);
+                });
+            }
+            else
+            {
+                Robustness.Instance.SafeCall(() =>
+                {
+                    process?.ProcessCompleted(context);
+                });
+            }
+
+            Robustness.Instance.SafeCall(() =>
+            {
+                process?.ProcessFinalizer(context);
+            });
+            
+        }
+
+        internal static bool CanRetryProcess(this IReadWritableProcessState state,
+            IProcessExecutionContext executionContext,
+            ILogger processLogger, IProcessRepository registeredProcesses,
+            IBatchEngineSubscribers batchEngineSubscribers, IStateManager stateManager, IFrameworkLogger fLogger,
+            out bool stop, out string stopMessage)
+        {
+            stop = false;
+            stopMessage = string.Empty;
+
+            var process = registeredProcesses.GetRegisteredProcesses().FirstOrDefault(p => p.ProcessKey == executionContext.Configuration.ProcessKey);
+
+            ProcessRetryContext context = new ProcessRetryContext(state.Id, state.ProcessId, processLogger, executionContext);
+
+            process?.InvokeProcessRetry(context);
+
+            if (context.StopFlag)
+            {
+                processLogger.Warn("Retry stopped by process class {processType}", process?.GetType());
+
+                //state.MarkProcessStatus(CompletionStatus.Finished, ResultStatus.Error,
+                //    "Retry stopped by process class", stateManager, registeredProcesses, executionContext, batchEngineSubscribers, fLogger);
+                stopMessage = "Retry stopped by process class";
+                stop = true;
+                return false;
+            }
+
+            foreach (var processSubscriber in batchEngineSubscribers.GetProcessSubscribers().Where(s=>s.ProcessKey== context.Configuration.ProcessKey))
+            {
+                Robustness.Instance.SafeCall(() => processSubscriber.OnProcessRetry(context),
+                    executionContext.Logger);
+                if (context.StopFlag)
+                {
+                    processLogger.Warn($"Retry stopped by extension {processSubscriber.GetType()}");
+                    stop = true;
+                    stopMessage = $"Retry stopped by extension {processSubscriber.GetType()}";
+                    
+                    //state.MarkProcessStatus(CompletionStatus.Finished, ResultStatus.Error,
+                    //    $"Retry stopped by extension {processSubscriber.GetType()}", stateManager, registeredProcesses, executionContext, batchEngineSubscribers, fLogger);
+
+                    //_eventAggregator.Publish(this, Constants.EventProcessStop,
+                    //    processId.ToString());
+
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public static int ResetProcessTasksForRetry(this IReadWritableProcessState state, IStateManager steManager)
         {
             //todo: update retrycount, start time and reset error tasks
             //IStateManager steManager = Resolver.Instance.Resolve<IStateManager>();
@@ -128,32 +300,48 @@ namespace BusLib.Helper
             steManager.UpdateTask(task, context.Transaction);
         }
 
-        public static void MarkTaskStatus(this TaskContext context, CompletionStatus completionStatus, ResultStatus result, string reason, IStateManager steManager)
+        public static bool MarkTaskStatus(this TaskContext context, CompletionStatus completionStatus, ResultStatus result, string reason, IStateManager steManager)
         {
-            context.Logger.Info(reason);
-            //IStateManager steManager = Bus.StateManager;
-
-            //todo: 
-            IReadWritableTaskState task = context.TaskStateWritable;
-            var isDone = completionStatus.IsDone();
-            if (isDone)
+            try
             {
-                task.IsFinished = true;
-                task.CompletedOn=DateTime.UtcNow;
+                context.Logger.Info(reason);
+                //IStateManager steManager = Bus.StateManager;
+
+                //todo: 
+                IReadWritableTaskState task = context.TaskStateWritable;
+                var isDone = completionStatus.IsDone();
+                if (isDone)
+                {
+                    task.IsFinished = true;
+                    task.CompletedOn=DateTime.UtcNow;
+                }
+
+                if (result.Id == ResultStatus.Error.Id)
+                {
+                    task.FailedCount = task.FailedCount + 1;
+                }
+                task.UpdatedOn=DateTime.UtcNow;
+                task.Status = result;
+
+                steManager.UpdateTask(task, context.Transaction, isDone);
+                if (isDone)
+                {
+                    context.Logger.Info("Done");
+                    //context.Transaction.Commit();
+                }
+
+                return true;
             }
-
-            if (result.Id == ResultStatus.Error.Id)
+            catch (FrameworkException e)
             {
-                task.FailedCount = task.FailedCount + 1;
+                context.Logger.Error("FrameworkException while updating task status from node {node}, Complete: {complete}, Result: {result}, Reason: {reason} with error {error}", NodeSettings.Instance.Name, completionStatus.Name, result.Name, reason, e);
+
+                return false;
             }
-            task.UpdatedOn=DateTime.UtcNow;
-            task.Status = result;
-
-            steManager.UpdateTask(task, context.Transaction);
-            if (isDone)
+            catch (Exception e)
             {
-                context.Logger.Info("Done");
-                context.Transaction.Commit();
+                context.Logger.Error("Failed to update task status from node {node}, Complete: {complete}, Result: {result}, Reason: {reason} with error {error}", NodeSettings.Instance.Name, completionStatus.Name, result.Name, reason, e);
+                return false;
             }
         }
 
@@ -187,9 +375,9 @@ namespace BusLib.Helper
             task.IsStopped = false;
             task.NodeKey = null;
 
-            steManager.UpdateTask(task, context.Transaction);
+            steManager.UpdateTask(task, context.Transaction, true);
             context.Logger.Info($"Task deferred {nextDeferVal} time");
-            context.Transaction.Commit();
+            //context.Transaction.Commit();
             return true;
         }
 
@@ -218,6 +406,10 @@ namespace BusLib.Helper
             {
                 entity.IsFinished = true;
                 //entity.CompletedOn = DateTime.UtcNow;
+            }
+            else
+            {
+                entity.IsFinished = false;
             }
 
             //entity.UpdatedOn = DateTime.UtcNow;
